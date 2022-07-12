@@ -1,6 +1,26 @@
-/***
- * Virtual bingo-blower for ambiguity experiments
- * @param dict with the parameters, most self-explanatory
+/**
+ * Instantiates the virtual bingo-blower.
+ * @class
+ * @param {Object} options
+ * @param {string} [options.el = 'world'] - Element where bingo-blower will be inserted
+ * @param {number} [options.width = 500] - Width of the bingo-blower
+ * @param {number} [options.height = 500] - Height of the bingo-blower
+ * @param {number} [options.wallWidth = 60] - Width of the walls
+ * @param {number} [options.ballSize = 10] - Size of the balls
+ * @param {number} [options.density = 0.004] - Density of the balls
+ * @param {number} [options.friction = 0.02] - Friction of the balls
+ * @param {number} [options.frictionAir = 0.001] - Air resistance of the balls
+ * @param {number} [options.frictionStatic = 0.001] - How much force it takes to move the balls again when they are stationary
+ * @param {number} [options.restitution = 0.7] - Bounciness of the balls
+ * @param {number} [options.windForce = 9e-4] - How strong the air blows at the bottom of the blower
+ * @param {string} [options.targetColour = 'LightGray'] - Colour of the target
+ * @param {number} [options.targetWidth = 50] - Width of the target
+ * @param {number} [options.targetThickness = 10] - Thickness of the target
+ * @param {string} [options.drawnBallHighlight = 'Black'] - Colour of the circle surrounding the ball drawn
+ * @param {number} [options.drawnBallThickness = 10] - Thickness of the circle surrounding the ball drawn
+ * @param {number} [options.timeSeconds = 3] - How long the balls keep tumbling after the target appears
+ * @property {Array<Array<number, string, string>>} balls - List of lists [number of balls, CSS ball colour, human ball colour]
+ * @see {@link https://brm.io/matter-js/docs/classes/Body.html} for details on density, friction, frictionAir, frictionStatic, restitution
  */
 function BingoBlower({
                          el = 'world',
@@ -27,8 +47,9 @@ function BingoBlower({
     );
 
 
-    /***
-     * Pause a function for ms seconds
+    /**
+     * Pauses a function for ms seconds
+     * @private
      * @param ms - time to pause
      * @returns {Promise<unknown>}
      */
@@ -37,19 +58,21 @@ function BingoBlower({
     }
 
 
-    /***
+    /**
      * Gets a random integer between min and max
-     * @param min
-     * @param max
-     * @returns {*}
+     * @private
+     * @param {number} min
+     * @param {number} max
+     * @returns {number}
      */
     function getRndInteger(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
 
-    /***
-     * Find the distance between two bodies
+    /**
+     * Finds the distance between two bodies
+     * @private
      * @param bodyA
      * @param bodyB
      * @returns {number}
@@ -60,8 +83,9 @@ function BingoBlower({
     }
 
 
-    /***
+    /**
      * Finds the minimum value in an array and returns its index
+     * @private
      * @param array
      * @returns {number}
      */
@@ -84,8 +108,9 @@ function BingoBlower({
     }
 
 
-    /***
+    /**
      * Converts CSS name to human-readable name
+     * @private
      * @param colourCSS
      * @returns {string}
      */
@@ -109,7 +134,7 @@ function BingoBlower({
     }
 
     /**
-     * Add mouse control
+     * Adds mouse control
      */
     this.addMouseControl = function () {
         Matter.World.add(world, mouseConstraint);
@@ -123,7 +148,7 @@ function BingoBlower({
     }
 
     /**
-     * Remove mouse control
+     * Removes mouse control
      */
     this.removeMouseControl = function () {
         mouse.element.removeEventListener('touchmove', mouse.mousemove);
@@ -133,10 +158,10 @@ function BingoBlower({
         Matter.World.remove(world, mouseConstraint);
     }
 
-    /***
+    /**
      * Adds balls to the scene
-     * @param ballList
-     * @param colours
+     * @param {(string|number[])} ballList - List of ball numbers, or its base64 representation
+     * @param {string[]}  [colours=['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna']] - List of ball colours
      */
     this.addBalls = function (ballList, colours = ['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna']) {
         try {
@@ -184,8 +209,9 @@ function BingoBlower({
     }
 
 
-    /***
-     * Stop the balls
+    /**
+     * Stops the balls
+     * @private
      */
     this.stop = function () {
         const balls = this._balls
@@ -195,8 +221,9 @@ function BingoBlower({
         }
     }
 
-    /***
-     * Let the balls move again
+    /**
+     * Lets the balls move
+     * @private
      */
     this.start = function () {
         const balls = this._balls
@@ -208,8 +235,9 @@ function BingoBlower({
     }
 
 
-    /***
+    /**
      * Creates a target at a location in the bingo blower
+     * @private
      */
     function createTarget() {
         // if we want a random target:
@@ -260,8 +288,8 @@ function BingoBlower({
     }
 
 
-    /***
-     * Reset the blower
+    /**
+     * Resets the blower
      */
     this.reset = function () {
         // hide the target
@@ -272,8 +300,9 @@ function BingoBlower({
     }
 
 
-    /***
-     * For test only: print in the console how many bodies there are in the scene
+    /**
+     * For test only: prints in the console how many bodies there are in the scene
+     * @private
      */
     this.countBodies = function () {
         const bodies = Matter.Composite.allBodies(world);
@@ -281,8 +310,9 @@ function BingoBlower({
     }
 
 
-    /***
-     * Find the closest ball to the target
+    /**
+     * Finds the closest ball to the target
+     * @private
      * @returns {*} body in matter.js, the closest ball
      */
     function findClosestBall(balls) {
@@ -301,9 +331,12 @@ function BingoBlower({
     }
 
 
-    /***
-     * Create a target, stop the balls, then draw the ball closest to the target
-     * @returns {Promise<string>}
+    /**
+     * Creates a target, stops the balls, then draws the ball closest to the target
+     * @async
+     * @returns {Promise<Object>} ballDrawn - Dictionary  of the ball drawn
+     * @returns {string} ballDrawn.colourRobot - CSS colour of the ball drawn
+     * @returns {string} ballDrawn.colourHuman - Colour of the ball drawn (e.g. MediumBlue becomes blue)
      */
     this.drawBall = async function () {
         // convert seconds to milliseconds
