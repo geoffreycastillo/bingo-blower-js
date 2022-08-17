@@ -18,7 +18,7 @@ or use a CDN such as [jsDelivr](https://www.jsdelivr.com/):
 "></script>
 ```
 
-## Usage
+## Quick start
 ```
 # html
 <canvas id="world"></canvas>
@@ -26,6 +26,9 @@ or use a CDN such as [jsDelivr](https://www.jsdelivr.com/):
 The ball drawn is: <span id="result"></span>
 
 # js
+<script src="https://cdn.jsdelivr.net/npm/matter-js@0.18.0/build/matter.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/matter-attractors@0.1.6/build/matter-attractors.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js/bingo-blower.min.js"></script>
 <script>
     let blower = new BingoBlower();
     blower.addBalls([1, 2, 3]);
@@ -40,9 +43,19 @@ The ball drawn is: <span id="result"></span>
 
 See the [wiki](https://github.com/geoffreycastillo/bingo-blower-js/wiki/Advice-for-oTree) for specific oTree advice.
 
+## Examples
+
+Create a bingo-blower with bigger balls: `let blower = new BingoBlower({'ballSize': 30});` (you will also need to increase `windForce` or decrease `density` because bigger balls are heavier!)
+
+Add a lot of balls: `blower.addBalls([10, 15, 20, 25]);`
+
+Same number of balls but base-64 encoded: `blower.addBalls('WzEwLDE1LDIwLDI1XQ==');`
+
+Add balls and specify your own colours: `blower.addBalls([1, 2, 3], ['MediumVioletRed', 'HotPink', 'Pink']);`
+
 ## Documentation
 
-See the [wiki](https://github.com/geoffreycastillo/bingo-blower-js/wiki) for the API documentation and for some specific advice when using in an experiment (e.g. in oTree).
+See the [wiki](https://github.com/geoffreycastillo/bingo-blower-js/wiki) for the API documentation and for some advice when using in an experiment (e.g. in oTree).
 
 ## Limitations
 
