@@ -1,5 +1,5 @@
 # bingo-blower.js
-`bingo-blower.js` is a virtual bingo-blower coded in JavaScript, aimed at web-based ambiguity and risk experiments.
+A virtual bingo-blower coded in JavaScript, aimed at web-based ambiguity and risk experiments.
 
 ## Demo
 https://geoffreycastillo.com/bingo-blower-js-demo/
@@ -77,6 +77,6 @@ If you use `bingo-blower.js`, please cite our paper: _[coming soon!]_
 
 ## Licence
 
-`bingo-blower.js` is licensed under [The MIT License (MIT)](https://opensource.org/licenses/MIT)
+`bingo-blower.js` is licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html).
 
 Copyright (c) 2022 Geoffrey Castillo
