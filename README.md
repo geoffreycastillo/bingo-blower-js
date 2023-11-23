@@ -1,5 +1,5 @@
 # bingo-blower.js
-A virtual bingo-blower coded in JavaScript, aimed at web-based ambiguity and risk experiments.
+A virtual bingo-blower for ambiguity and risk experiments.
 
 ## Demo
 https://geoffreycastillo.com/bingo-blower-js-demo/
@@ -69,7 +69,8 @@ If you use `bingo-blower.js` in an experiment, you can (and maybe should) contro
 Head over to the [wiki](https://github.com/geoffreycastillo/bingo-blower-js/wiki/Using-bingo-blower.js-in-an-experiment) for advice on how to do that.
 
 ## Citation
-If you use `bingo-blower.js`, please cite our paper: _[coming soon!]_
+
+If you use `bingo-blower.js`, please cite our paper: [Andersson, Castillo and Wengström, "Generating ambiguity with a virtual bingo blower"](https://geoffreycastillo.com/pdf/Andersson,Castillo,Wengstroem-Generating-ambiguity-with-a-virtual-bingo-blower.pdf)
 
 ## Bugs? Suggestions?
 
