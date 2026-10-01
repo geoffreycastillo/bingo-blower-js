@@ -90,6 +90,8 @@
         #balls = [];
         #drawnBall = null;
         #drawId = 0;
+        #locked = false;
+        #mouseControl = false;
 
         /**
          * @param {Object} [options]
@@ -229,6 +231,8 @@
 
             const drawId = ++this.#drawId;
 
+            this.#locked = true;
+            this.#disableMouse();
             this.#target.render.visible = true;
             await sleep(this.#options.timeSeconds * 1000);
             if (drawId !== this.#drawId) {
@@ -266,32 +270,31 @@
             }
 
             this.#unfreeze();
+
+            this.#locked = false;
+            if (this.#mouseControl) {
+                this.#enableMouse();
+            }
         }
 
         /**
-         * Lets the user drag the balls with the mouse or by touch.
+         * Lets the user drag the balls with the mouse or by touch. Does nothing during a draw.
          */
         addMouseControl() {
-            this.removeMouseControl();
+            if (this.#locked) {
+                return;
+            }
 
-            Matter.Composite.add(this.#engine.world, this.#mouseConstraint);
-
-            const element = this.#mouse.element;
-            element.addEventListener('touchmove', this.#mouse.mousemove);
-            element.addEventListener('touchstart', this.#mouse.mousedown);
-            element.addEventListener('touchend', this.#mouse.mouseup);
+            this.#mouseControl = true;
+            this.#enableMouse();
         }
 
         /**
          * Stops the user from dragging the balls.
          */
         removeMouseControl() {
-            const element = this.#mouse.element;
-            element.removeEventListener('touchmove', this.#mouse.mousemove);
-            element.removeEventListener('touchstart', this.#mouse.mousedown);
-            element.removeEventListener('touchend', this.#mouse.mouseup);
-
-            Matter.Composite.remove(this.#engine.world, this.#mouseConstraint);
+            this.#mouseControl = false;
+            this.#disableMouse();
         }
 
         /**
@@ -313,6 +316,28 @@
             Matter.Events.off(this.#render);
             Matter.Composite.clear(this.#engine.world, false);
             Matter.Engine.clear(this.#engine);
+        }
+
+        #enableMouse() {
+            this.#disableMouse();
+
+            Matter.Composite.add(this.#engine.world, this.#mouseConstraint);
+
+            const element = this.#mouse.element;
+            element.addEventListener('touchmove', this.#mouse.mousemove);
+            element.addEventListener('touchstart', this.#mouse.mousedown);
+            element.addEventListener('touchend', this.#mouse.mouseup);
+        }
+
+        #disableMouse() {
+            const element = this.#mouse.element;
+            element.removeEventListener('touchmove', this.#mouse.mousemove);
+            element.removeEventListener('touchstart', this.#mouse.mousedown);
+            element.removeEventListener('touchend', this.#mouse.mouseup);
+
+            Matter.Composite.remove(this.#engine.world, this.#mouseConstraint);
+            this.#mouse.button = -1;
+            this.#mouseConstraint.constraint.bodyB = null;
         }
 
         #freeze() {

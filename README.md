@@ -116,6 +116,10 @@ Hides the target, removes the highlight and lets the balls move again. Cancels a
 Lets the user drag the balls with the mouse or by touch, or stops them from doing so.
 Mouse control is off by default.
 
+Mouse control is locked from the start of `drawBall()` until `reset()`, so that the user cannot steer a ball onto the target.
+`reset()` turns it back on if it was on before the draw.
+Calling `addMouseControl()` while it is locked does nothing.
+
 ### `blower.destroy()`
 
 Stops the simulation, so that a new bingo-blower can be created on the same canvas. Cancels a draw in progress.
