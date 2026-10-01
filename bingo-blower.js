@@ -1,6 +1,4 @@
 (function () {
-    Matter.use('matter-attractors');
-
     const DEFAULT_OPTIONS = {
         el: 'world',
         width: 500,
@@ -88,6 +86,7 @@
         #target;
         #mouse;
         #mouseConstraint;
+        #windSource;
         #balls = [];
         #drawnBall = null;
         #drawId = 0;
@@ -139,10 +138,11 @@
                 maxUpdates: 3,
             });
 
+            this.#windSource = this.#createWindSource();
             this.#target = this.#createTarget();
             Matter.Composite.add(this.#engine.world, [
                 ...this.#createWalls(),
-                this.#createWindSource(),
+                this.#windSource,
                 this.#target,
             ]);
 
@@ -158,7 +158,10 @@
             });
             this.removeMouseControl();
 
-            Matter.Events.on(this.#engine, 'beforeUpdate', () => this.#limitSpeed());
+            Matter.Events.on(this.#engine, 'beforeUpdate', () => {
+                this.#applyWind();
+                this.#limitSpeed();
+            });
 
             Matter.Render.run(this.#render);
             Matter.Runner.run(this.#runner, this.#engine);
@@ -350,28 +353,12 @@
         }
 
         #createWindSource() {
-            const {width, windForce} = this.#options;
-            const radius = 0.1 * width;
-            const force = windForce * FORCE_SCALE;
+            const {width} = this.#options;
 
-            return Matter.Bodies.circle(width / 2, width, radius, {
+            return Matter.Bodies.circle(width / 2, width, 0.1 * width, {
                 isStatic: true,
                 render: {
                     fillStyle: WALL_COLOUR,
-                },
-                plugin: {
-                    attractors: [
-                        (windSource, body) => {
-                            const distanceX = Math.abs(windSource.position.x - body.position.x);
-                            const distanceY = windSource.position.y - body.position.y;
-                            const isInWind = distanceX < 2 * radius;
-
-                            return {
-                                x: 0,
-                                y: isInWind ? -force * width / distanceY : 0,
-                            };
-                        },
-                    ],
                 },
             });
         }
@@ -435,6 +422,22 @@
             }
 
             return closestBall;
+        }
+
+        #applyWind() {
+            const {width, windForce} = this.#options;
+            const force = windForce * FORCE_SCALE;
+            const windSource = this.#windSource.position;
+            const windRadius = this.#windSource.circleRadius;
+
+            for (const ball of this.#balls) {
+                const distanceX = Math.abs(windSource.x - ball.position.x);
+                const distanceY = windSource.y - ball.position.y;
+
+                if (distanceX < 2 * windRadius) {
+                    Matter.Body.applyForce(ball, ball.position, {x: 0, y: -force * width / distanceY});
+                }
+            }
         }
 
         #limitSpeed() {

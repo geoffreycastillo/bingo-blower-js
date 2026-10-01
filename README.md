@@ -5,14 +5,13 @@ A virtual bingo-blower for ambiguity and risk experiments.
 https://geoffreycastillo.com/bingo-blower-js-demo/
 
 ## Installation
-`bingo-blower.js` uses [`matter.js`](https://github.com/liabru/matter-js) and its plugin [`matter-attractors`](https://github.com/liabru/matter-attractors).
-Include them first, then `bingo-blower.js`, for example from [jsDelivr](https://www.jsdelivr.com/):
+`bingo-blower.js` uses [`matter.js`](https://github.com/liabru/matter-js).
+Include both, for example from [jsDelivr](https://www.jsdelivr.com/):
 ```html
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/matter-attractors@0.1.6/build/matter-attractors.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v1.0.0/bingo-blower.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v1.1.0/bingo-blower.min.js"></script>
 ```
-Always pin the version (`@v1.0.0` above), so that a new release cannot change your experiment while it is running.
+Always pin the version (`@v1.1.0` above), so that a new release cannot change your experiment while it is running.
 You can also download `bingo-blower.js` from the [releases](https://github.com/geoffreycastillo/bingo-blower-js/releases) and host it yourself.
 
 ## Quick start
@@ -22,8 +21,7 @@ You can also download `bingo-blower.js` from the [releases](https://github.com/g
 The ball drawn is: <span id="result"></span>
 
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/matter-attractors@0.1.6/build/matter-attractors.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v1.0.0/bingo-blower.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v1.1.0/bingo-blower.min.js"></script>
 <script>
     const blower = new BingoBlower();
     blower.addBalls([1, 2, 3]);
@@ -111,6 +109,11 @@ Mouse control is off by default.
 ### `blower.destroy()`
 
 Stops the simulation, so that a new bingo-blower can be created on the same canvas. Cancels a draw in progress.
+
+## Changes in v1.1
+
+- No longer needs the `matter-attractors` plugin: the wind is built in. The simulation is unchanged.
+- `bingo-blower.js` can be loaded before or after matter.js.
 
 ## Changes in v1
 
