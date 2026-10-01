@@ -9,7 +9,7 @@
 <h1>bingo-blower.js demo</h1>
 <p>See the <a href="https://github.com/geoffreycastillo/bingo-blower-js">README</a> for installation and documentation.</p>
 
-<canvas id="world" class="blower"></canvas>
+<canvas id="world"></canvas>
 
 <p>
     <button type="button" id="draw">Draw a ball</button>
@@ -70,6 +70,7 @@
     <p><label>drawnBallHighlight <input type="text" name="drawnBallHighlight" value="Black"></label></p>
     <p><label>drawnBallThickness <input type="number" step="any" name="drawnBallThickness" value="10"></label></p>
     <p><label>timeSeconds <input type="number" step="any" name="timeSeconds" value="3"></label></p>
+    <p><label>revealSeconds <input type="number" step="any" name="revealSeconds" value="0"></label></p>
     <button type="submit">Rebuild the blower</button>
 </form>
 
@@ -83,14 +84,12 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
 &lt;script src="https://cdn.jsdelivr.net/npm/matter-attractors@0.1.6/build/matter-attractors.min.js"&gt;&lt;/script&gt;
 &lt;script src="bingo-blower.js"&gt;&lt;/script&gt;
 &lt;script&gt;
-    let blower = new BingoBlower();
+    const blower = new BingoBlower();
     blower.addBalls([18, 6, 3]);
-    document.getElementById('draw').addEventListener('click',
-        async () =&gt; {
-            const draw = await blower.drawBall();
-            document.getElementById('result').innerHTML = draw.colourHuman;
-        }
-    );
+    document.getElementById('draw').addEventListener('click', async () =&gt; {
+        const draw = await blower.drawBall();
+        document.getElementById('result').textContent = draw.label;
+    });
 &lt;/script&gt;
 </pre>
 
@@ -108,8 +107,8 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
 
     function showCounts() {
         for (const span of document.querySelectorAll('.count')) {
-            const entry = blower.balls.find(count => count[1] === span.dataset.colour);
-            span.textContent = entry ? entry[0] : 0;
+            const entry = blower.balls.find(count => count.colour === span.dataset.colour);
+            span.textContent = entry ? entry.count : 0;
         }
     }
 
@@ -118,7 +117,7 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
         const ballCounts = blower.balls;
         blower.destroy();
         blower = new BingoBlower(readOptions());
-        blower.addBalls(ballCounts.map(count => count[0]), ballCounts.map(count => count[1]));
+        blower.addBalls(ballCounts.map(count => count.count), ballCounts.map(count => count.colour));
         document.getElementById('result').textContent = '';
         showCounts();
     }
@@ -129,7 +128,9 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
 
     document.getElementById('draw').addEventListener('click', async () => {
         const draw = await blower.drawBall();
-        document.getElementById('result').textContent = draw.colourHuman;
+        if (draw) {
+            document.getElementById('result').textContent = draw.label;
+        }
     });
 
     document.getElementById('reset').addEventListener('click', () => {

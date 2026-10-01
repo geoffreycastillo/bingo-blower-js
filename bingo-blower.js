@@ -1,638 +1,452 @@
-/**
- * Instantiates the virtual bingo-blower.
- * @class
- * @param {Object} options
- * @param {string} [options.el = 'world'] - Element where bingo-blower will be inserted
- * @param {number} [options.width = 500] - Width and height of the bingo-blower, which is a square
- * @param {number} [options.wallWidth = 60] - Width of the walls
- * @param {number} [options.ballSize = 10] - Size of the balls
- * @param {number} [options.density = 0.004] - Density of the balls
- * @param {number} [options.friction = 0.02] - Friction of the balls
- * @param {number} [options.frictionAir = 0.001] - Air resistance of the balls
- * @param {number} [options.frictionStatic = 0.001] - How much force it takes to move the balls again when they are stationary
- * @param {number} [options.restitution = 0.7] - Bounciness of the balls
- * @param {number} [options.windForce = 9e-4] - How strong the air blows at the bottom of the blower
- * @param {string} [options.targetColour = 'LightGray'] - Colour of the target
- * @param {number} [options.targetWidth = 50] - Width of the target
- * @param {number} [options.targetThickness = 10] - Thickness of the target
- * @param {string} [options.drawnBallHighlight = 'Black'] - Colour of the circle surrounding the ball drawn
- * @param {number} [options.drawnBallThickness = 10] - Thickness of the circle surrounding the ball drawn
- * @param {number} [options.timeSeconds = 3] - How long the balls keep tumbling after the target appears
- * @property {Array<Array<number, string, string>>} balls - List of lists [number of balls, CSS ball colour, human ball colour]
- * @see {@link https://brm.io/matter-js/docs/classes/Body.html} for details on density, friction, frictionAir, frictionStatic, restitution
- */
-function BingoBlower({
-                         el = 'world',
-                         width = 500,
-                         wallWidth = 60,
-                         ballSize = 10,
-                         density = 0.004,
-                         friction = 0.02,
-                         frictionAir = 0.001,
-                         frictionStatic = 0.001,
-                         restitution = 0.7,
-                         windForce = 9e-4,
-                         targetColour = 'LightGray',
-                         targetWidth = 50,
-                         targetThickness = 10,
-                         drawnBallHighlight = 'Black',
-                         drawnBallThickness = 10,
-                         timeSeconds = 3
-                     } = {}) {
+(function () {
+    Matter.use('matter-attractors');
 
-    Matter.use(
-        'matter-attractors'
-    );
+    const DEFAULT_OPTIONS = {
+        el: 'world',
+        width: 500,
+        wallWidth: 60,
+        ballSize: 10,
+        density: 0.004,
+        friction: 0.02,
+        frictionAir: 0.001,
+        frictionStatic: 0.001,
+        restitution: 0.7,
+        windForce: 9e-4,
+        targetColour: 'LightGray',
+        targetWidth: 50,
+        targetThickness: 10,
+        drawnBallHighlight: 'Black',
+        drawnBallThickness: 10,
+        timeSeconds: 3,
+        revealSeconds: 0,
+    };
 
-    const defaultColours = ['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna'];
+    const DEFAULT_COLOURS = ['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna'];
 
+    const LABELS = {
+        Red: 'red',
+        Blue: 'blue',
+        Green: 'green',
+        Yellow: 'yellow',
+        Pink: 'pink',
+        Violet: 'violet',
+        Gold: 'yellow',
+        Sienna: 'brown',
+    };
 
-    /**
-     * Pauses a function for ms seconds
-     * @private
-     * @param ms - time to pause
-     * @returns {Promise<unknown>}
-     */
+    const WALL_COLOUR = 'LightGray';
+    const BOTTOM_WALL_ANGLE = 0.361799;
+    const MAX_SPEED = 20;
+    const HIGHLIGHT_DELAY_MS = 1000;
+
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-
-    /**
-     * Gets a random integer between min and max
-     * @private
-     * @param {number} min
-     * @param {number} max
-     * @returns {number}
-     */
-    function getRndInteger(min, max) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
+    function randomBetween(min, max) {
+        return min + Math.random() * (max - min);
     }
 
-
-    /**
-     * Finds the distance between two bodies
-     * @private
-     * @param bodyA
-     * @param bodyB
-     * @returns {number}
-     */
-    function findDistance(bodyA, bodyB) {
-        const distanceSquared = (bodyB.position.x - bodyA.position.x) ** 2 + (bodyB.position.y - bodyA.position.y) ** 2;
-        return Math.sqrt(distanceSquared)
+    function colourLabel(colour) {
+        const name = Object.keys(LABELS).find(name => colour.endsWith(name));
+        return name ? LABELS[name] : colour.toLowerCase();
     }
 
+    function parseCounts(ballList, colours) {
+        const counts = typeof ballList === 'string' ? JSON.parse(atob(ballList)) : ballList;
 
-    /**
-     * Finds the minimum value in an array and returns its index
-     * @private
-     * @param array
-     * @returns {number}
-     */
-    function indexOfMin(array) {
-        if (array.length === 0) {
-            return -1;
+        if (counts.length > colours.length) {
+            throw new Error(`BingoBlower: ${counts.length} ball counts but only ${colours.length} colours`);
         }
 
-        let min = array[0];
-        let minIndex = 0;
-
-        for (let i = 1; i < array.length; i++) {
-            if (array[i] < min) {
-                minIndex = i;
-                min = array[i];
-            }
-        }
-
-        return minIndex;
-    }
-
-
-    /**
-     * Converts CSS name to human-readable name
-     * @private
-     * @param colourCSS
-     * @returns {string}
-     */
-    function findHumanColour(colourCSS) {
-        const colours = ['Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Violet'];
-        let colourHuman = '';
-
-        for (let colour of colours) {
-            if (colourCSS.endsWith(colour)) {
-                colourHuman = colour.toLowerCase();
-            }
-            if (colourCSS === "Gold") {
-                colourHuman = 'yellow'
-            }
-            if (colourCSS === "Sienna") {
-                colourHuman = 'brown'
-            }
-        }
-
-        return colourHuman
-    }
-
-
-    /**
-     * Changes the number of balls of a colour in a list of [number of balls, CSS ball colour, human ball colour]
-     * @private
-     * @param ballCounts
-     * @param colourCSS
-     * @param change - number of balls to add (negative to remove)
-     */
-    function updateBallCount(ballCounts, colourCSS, change) {
-        const entry = ballCounts.find(count => count[1] === colourCSS);
-
-        if (entry) {
-            entry[0] += change;
-        } else {
-            ballCounts.push([change, colourCSS, findHumanColour(colourCSS)]);
-        }
+        return counts;
     }
 
     /**
-     * Adds mouse control
+     * @typedef {Object} BallCount
+     * @property {string} colour - CSS colour of the balls
+     * @property {string} label - Human-readable colour (e.g. 'MediumBlue' becomes 'blue')
+     * @property {number} count - Number of balls of this colour
      */
-    this.addMouseControl = function () {
-        Matter.World.add(world, mouseConstraint);
-
-        mouse.element.addEventListener('touchmove', mouse.mousemove);
-        mouse.element.addEventListener('touchstart', mouse.mousedown);
-        mouse.element.addEventListener('touchend', mouse.mouseup);
-
-        // keep the mouse in sync with rendering
-        render.mouse = mouse;
-    }
 
     /**
-     * Removes mouse control
+     * @typedef {Object} Draw
+     * @property {string} colour - CSS colour of the ball drawn
+     * @property {string} label - Human-readable colour of the ball drawn (e.g. 'MediumBlue' becomes 'blue')
      */
-    this.removeMouseControl = function () {
-        mouse.element.removeEventListener('touchmove', mouse.mousemove);
-        mouse.element.removeEventListener('touchstart', mouse.mousedown);
-        mouse.element.removeEventListener('touchend', mouse.mouseup);
-
-        Matter.World.remove(world, mouseConstraint);
-    }
 
     /**
-     * Adds balls to the scene
-     * @param {(string|number[])} ballList - List of ball numbers, or its base64 representation
-     * @param {string[]}  [colours=['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna']] - List of ball colours
+     * A virtual bingo-blower drawn on a canvas.
+     * @see {@link https://brm.io/matter-js/docs/classes/Body.html} for density, friction, frictionAir, frictionStatic, restitution
      */
-    this.addBalls = function (ballList, colours = defaultColours) {
-        try {
-            ballList = JSON.parse(atob(ballList))
-        } catch (e) {
-        }
+    class BingoBlower {
+        #options;
+        #engine;
+        #render;
+        #runner;
+        #target;
+        #mouse;
+        #mouseConstraint;
+        #balls = [];
+        #drawnBall = null;
+        #drawId = 0;
 
-        if (ballList.length > colours.length) {
-            throw "You should specify more colours!"
-        }
+        /**
+         * @param {Object} [options]
+         * @param {string} [options.el='world'] - Id of the canvas where the bingo-blower is drawn
+         * @param {number} [options.width=500] - Width and height of the bingo-blower, which is a square
+         * @param {number} [options.wallWidth=60] - Width of the walls
+         * @param {number} [options.ballSize=10] - Radius of the balls
+         * @param {number} [options.density=0.004] - Density of the balls
+         * @param {number} [options.friction=0.02] - Friction of the balls
+         * @param {number} [options.frictionAir=0.001] - Air resistance of the balls
+         * @param {number} [options.frictionStatic=0.001] - How much force it takes to move a stationary ball
+         * @param {number} [options.restitution=0.7] - Bounciness of the balls
+         * @param {number} [options.windForce=9e-4] - How strong the air blows at the bottom of the blower
+         * @param {string} [options.targetColour='LightGray'] - Colour of the target
+         * @param {number} [options.targetWidth=50] - Width of the target
+         * @param {number} [options.targetThickness=10] - Thickness of the target
+         * @param {string} [options.drawnBallHighlight='Black'] - Colour of the circle around the ball drawn
+         * @param {number} [options.drawnBallThickness=10] - Thickness of the circle around the ball drawn
+         * @param {number} [options.timeSeconds=3] - How long the balls keep tumbling after the target appears
+         * @param {number} [options.revealSeconds=0] - How long the blower takes to go from blurry to sharp (0 for no blur)
+         */
+        constructor(options = {}) {
+            this.#options = {...DEFAULT_OPTIONS, ...options};
+            const {el, width, revealSeconds} = this.#options;
 
-        let balls = [];
-
-        for (let i = 0; i < ballList.length; i++) {
-            const ballNumber = ballList[i];
-            const ballColour = colours[i];
-
-            updateBallCount(this.balls, ballColour, ballNumber);
-
-            for (let j = 0; j < ballNumber; j++) {
-
-                balls.push(Matter.Bodies.circle(
-                    getRndInteger(wallWidth + 10, width - wallWidth - 10),
-                    getRndInteger(0.8 * width, 0.9 * width),
-                    ballSize,
-                    {
-                        density: density,
-                        friction: friction,
-                        frictionAir: frictionAir,
-                        frictionStatic: frictionStatic,
-                        restitution: restitution,
-                        render: {
-                            fillStyle: ballColour,
-                        }
-                    })
-                );
+            const canvas = document.getElementById(el);
+            if (!canvas) {
+                throw new Error(`BingoBlower: no element with id '${el}'`);
             }
 
-        }
+            this.#engine = Matter.Engine.create();
 
-        Matter.World.add(world, balls);
-        this._balls.push(...balls);
-    }
+            this.#render = Matter.Render.create({
+                canvas: canvas,
+                engine: this.#engine,
+                options: {
+                    width: width,
+                    height: width,
+                    wireframes: false,
+                    background: 'White',
+                },
+            });
 
+            this.#runner = Matter.Runner.create({
+                isFixed: true,
+                delta: 15,
+            });
 
-    /**
-     * Removes balls from the scene
-     * @param {(string|number[])} ballList - List of ball numbers to remove, or its base64 representation
-     * @param {string[]}  [colours=['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna']] - List of ball colours
-     */
-    this.removeBalls = function (ballList, colours = defaultColours) {
-        try {
-            ballList = JSON.parse(atob(ballList))
-        } catch (e) {
-        }
+            this.#target = this.#createTarget();
+            Matter.Composite.add(this.#engine.world, [
+                ...this.#createWalls(),
+                this.#createWindSource(),
+                this.#target,
+            ]);
 
-        if (ballList.length > colours.length) {
-            throw "You should specify more colours!"
-        }
-
-        for (let i = 0; i < ballList.length; i++) {
-            const ballNumber = ballList[i];
-            const ballColour = colours[i];
-
-            const ballsToRemove = this._balls
-                .filter(ball => ball.render.fillStyle === ballColour)
-                .slice(0, ballNumber);
-
-            Matter.World.remove(world, ballsToRemove);
-            this._balls = this._balls.filter(ball => !ballsToRemove.includes(ball));
-            updateBallCount(this.balls, ballColour, -ballsToRemove.length);
-        }
-    }
-
-
-    /**
-     * Stops the simulation and removes the bingo-blower, so that a new one can be created on the same element
-     */
-    this.destroy = function () {
-        this.removeMouseControl();
-        mouse.element.removeEventListener('mousemove', mouse.mousemove);
-        mouse.element.removeEventListener('mousedown', mouse.mousedown);
-        mouse.element.removeEventListener('mouseup', mouse.mouseup);
-
-        Matter.Render.stop(render);
-        Matter.Runner.stop(runner);
-        Matter.Events.off(engine);
-        Matter.World.clear(world, false);
-        Matter.Engine.clear(engine);
-
-        style.remove();
-    }
-
-
-    /**
-     * Stops the balls
-     * @private
-     */
-    this.stop = function () {
-        const balls = this._balls
-        for (let i = 0; i < balls.length; i++) {
-            let ball = balls[i];
-            ball.isStatic = true
-        }
-    }
-
-    /**
-     * Lets the balls move
-     * @private
-     */
-    this.start = function () {
-        const balls = this._balls
-        for (let i = 0; i < balls.length; i++) {
-            let ball = balls[i];
-            ball.isStatic = false;
-            ball.render.lineWidth = 0;
-        }
-    }
-
-
-    /**
-     * Creates a target at a location in the bingo blower
-     * @private
-     */
-    function createTarget() {
-        // if we want a random target:
-        // const x = wallWidth + Math.random() * (width - 2 * wallWidth);
-        // const y = wallWidth + Math.random() * (width - 70);
-
-        const x = width / 2;
-        const y = width / 2;
-
-        const crossOptions = {
-            render:
-                {
-                    fillStyle: targetColour,
-                }
-        };
-
-        const verticalPart = Matter.Bodies.rectangle(
-                x,
-                y,
-                targetWidth,
-                targetThickness,
-                crossOptions
-            )
-        ;
-        const horizontalPart = Matter.Bodies.rectangle(
-            x,
-            y,
-            targetThickness,
-            targetWidth,
-            crossOptions
-        );
-
-        return Matter.Body.create(
-            {
-                parts: [verticalPart, horizontalPart],
-                isStatic: true,
-                render:
-                    {
+            this.#mouse = Matter.Mouse.create(canvas);
+            canvas.removeEventListener('mousewheel', this.#mouse.mousewheel);
+            canvas.removeEventListener('DOMMouseScroll', this.#mouse.mousewheel);
+            this.#mouseConstraint = Matter.MouseConstraint.create(this.#engine, {
+                mouse: this.#mouse,
+                constraint: {
+                    render: {
                         visible: false,
                     },
-                collisionFilter:
-                    {
-                        group: 0,
-                        category: 0
+                },
+            });
+            this.removeMouseControl();
+
+            Matter.Events.on(this.#engine, 'beforeUpdate', () => this.#limitSpeed());
+
+            Matter.Render.run(this.#render);
+            Matter.Runner.run(this.#runner, this.#engine);
+
+            if (revealSeconds > 0) {
+                canvas.animate([{filter: 'blur(100px)'}, {filter: 'blur(0px)'}], revealSeconds * 1000);
+            }
+        }
+
+        /**
+         * Number of balls of each colour currently in the blower.
+         * @returns {BallCount[]}
+         */
+        get balls() {
+            const counts = [];
+
+            for (const ball of this.#balls) {
+                const colour = ball.render.fillStyle;
+                const entry = counts.find(count => count.colour === colour);
+
+                if (entry) {
+                    entry.count++;
+                } else {
+                    counts.push({colour: colour, label: colourLabel(colour), count: 1});
+                }
+            }
+
+            return counts;
+        }
+
+        /**
+         * Adds balls to the blower.
+         * @param {(number[]|string)} ballList - Number of balls of each colour, or its base64-encoded JSON
+         * @param {string[]} [colours=['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna']] - CSS colour of each entry
+         */
+        addBalls(ballList, colours = DEFAULT_COLOURS) {
+            const counts = parseCounts(ballList, colours);
+            const balls = [];
+
+            counts.forEach((count, i) => {
+                for (let j = 0; j < count; j++) {
+                    balls.push(this.#createBall(colours[i]));
+                }
+            });
+
+            Matter.Composite.add(this.#engine.world, balls);
+            this.#balls.push(...balls);
+        }
+
+        /**
+         * Removes balls from the blower.
+         * @param {(number[]|string)} ballList - Number of balls of each colour, or its base64-encoded JSON
+         * @param {string[]} [colours=['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna']] - CSS colour of each entry
+         */
+        removeBalls(ballList, colours = DEFAULT_COLOURS) {
+            const counts = parseCounts(ballList, colours);
+
+            counts.forEach((count, i) => {
+                const toRemove = this.#balls
+                    .filter(ball => ball.render.fillStyle === colours[i])
+                    .slice(0, count);
+
+                Matter.Composite.remove(this.#engine.world, toRemove);
+                this.#balls = this.#balls.filter(ball => !toRemove.includes(ball));
+            });
+        }
+
+        /**
+         * Shows the target, lets the balls tumble for `timeSeconds`, stops them, then highlights the ball closest to the
+         * target.
+         * @returns {Promise<?Draw>} The ball drawn, or null if `reset()` or `destroy()` was called during the draw
+         */
+        async drawBall() {
+            if (this.#balls.length === 0) {
+                throw new Error('BingoBlower: there are no balls to draw');
+            }
+
+            const drawId = ++this.#drawId;
+
+            this.#target.render.visible = true;
+            await sleep(this.#options.timeSeconds * 1000);
+            if (drawId !== this.#drawId) {
+                return null;
+            }
+
+            this.#freeze();
+            const ball = this.#closestBallToTarget();
+
+            await sleep(HIGHLIGHT_DELAY_MS);
+            if (drawId !== this.#drawId) {
+                return null;
+            }
+
+            ball.render.strokeStyle = this.#options.drawnBallHighlight;
+            ball.render.lineWidth = this.#options.drawnBallThickness;
+            this.#drawnBall = ball;
+
+            return {
+                colour: ball.render.fillStyle,
+                label: colourLabel(ball.render.fillStyle),
+            };
+        }
+
+        /**
+         * Hides the target, removes the highlight and lets the balls move again. Cancels a draw in progress.
+         */
+        reset() {
+            this.#drawId++;
+            this.#target.render.visible = false;
+
+            if (this.#drawnBall) {
+                this.#drawnBall.render.lineWidth = 0;
+                this.#drawnBall = null;
+            }
+
+            this.#unfreeze();
+        }
+
+        /**
+         * Lets the user drag the balls with the mouse or by touch.
+         */
+        addMouseControl() {
+            this.removeMouseControl();
+
+            Matter.Composite.add(this.#engine.world, this.#mouseConstraint);
+
+            const element = this.#mouse.element;
+            element.addEventListener('touchmove', this.#mouse.mousemove);
+            element.addEventListener('touchstart', this.#mouse.mousedown);
+            element.addEventListener('touchend', this.#mouse.mouseup);
+        }
+
+        /**
+         * Stops the user from dragging the balls.
+         */
+        removeMouseControl() {
+            const element = this.#mouse.element;
+            element.removeEventListener('touchmove', this.#mouse.mousemove);
+            element.removeEventListener('touchstart', this.#mouse.mousedown);
+            element.removeEventListener('touchend', this.#mouse.mouseup);
+
+            Matter.Composite.remove(this.#engine.world, this.#mouseConstraint);
+        }
+
+        /**
+         * Stops the simulation, so that a new bingo-blower can be created on the same canvas. Cancels a draw in
+         * progress.
+         */
+        destroy() {
+            this.#drawId++;
+            this.removeMouseControl();
+
+            const element = this.#mouse.element;
+            element.removeEventListener('mousemove', this.#mouse.mousemove);
+            element.removeEventListener('mousedown', this.#mouse.mousedown);
+            element.removeEventListener('mouseup', this.#mouse.mouseup);
+
+            Matter.Render.stop(this.#render);
+            Matter.Runner.stop(this.#runner);
+            Matter.Events.off(this.#engine);
+            Matter.Composite.clear(this.#engine.world, false);
+            Matter.Engine.clear(this.#engine);
+        }
+
+        #freeze() {
+            this.#runner.enabled = false;
+        }
+
+        #unfreeze() {
+            this.#runner.enabled = true;
+        }
+
+        #createWalls() {
+            const {width, wallWidth} = this.#options;
+            const wallOptions = {
+                isStatic: true,
+                render: {
+                    fillStyle: WALL_COLOUR,
+                },
+            };
+
+            return [
+                Matter.Bodies.rectangle(width / 2, 0, width, wallWidth, wallOptions),
+                Matter.Bodies.rectangle(0, width / 2, wallWidth, width, wallOptions),
+                Matter.Bodies.rectangle(width, width / 2, wallWidth, width, wallOptions),
+                Matter.Bodies.polygon(0, 1.4 * width, 3, -width, {...wallOptions, angle: -BOTTOM_WALL_ANGLE}),
+                Matter.Bodies.polygon(width, 1.4 * width, 3, width, {...wallOptions, angle: BOTTOM_WALL_ANGLE}),
+            ];
+        }
+
+        #createWindSource() {
+            const {width, windForce} = this.#options;
+            const radius = 0.1 * width;
+
+            return Matter.Bodies.circle(width / 2, width, radius, {
+                isStatic: true,
+                render: {
+                    fillStyle: WALL_COLOUR,
+                },
+                plugin: {
+                    attractors: [
+                        (windSource, body) => {
+                            const distanceX = Math.abs(windSource.position.x - body.position.x);
+                            const distanceY = windSource.position.y - body.position.y;
+                            const isInWind = distanceX < 2 * radius;
+
+                            return {
+                                x: 0,
+                                y: isInWind ? -windForce * width / distanceY : 0,
+                            };
+                        },
+                    ],
+                },
+            });
+        }
+
+        #createTarget() {
+            const {width, targetColour, targetWidth, targetThickness} = this.#options;
+            const barOptions = {
+                render: {
+                    fillStyle: targetColour,
+                },
+            };
+
+            return Matter.Body.create({
+                parts: [
+                    Matter.Bodies.rectangle(width / 2, width / 2, targetWidth, targetThickness, barOptions),
+                    Matter.Bodies.rectangle(width / 2, width / 2, targetThickness, targetWidth, barOptions),
+                ],
+                isStatic: true,
+                collisionFilter: {
+                    category: 0,
+                },
+                render: {
+                    visible: false,
+                },
+            });
+        }
+
+        #createBall(colour) {
+            const {width, wallWidth, ballSize, density, friction, frictionAir, frictionStatic, restitution} = this.#options;
+
+            return Matter.Bodies.circle(
+                randomBetween(wallWidth + 10, width - wallWidth - 10),
+                randomBetween(0.8 * width, 0.9 * width),
+                ballSize,
+                {
+                    density: density,
+                    friction: friction,
+                    frictionAir: frictionAir,
+                    frictionStatic: frictionStatic,
+                    restitution: restitution,
+                    render: {
+                        fillStyle: colour,
                     },
-            }
-        )
-    }
-
-
-    /**
-     * Resets the blower
-     */
-    this.reset = function () {
-        // hide the target
-        target.render.visible = false;
-
-        // restart the balls
-        this.start(this._balls);
-    }
-
-
-    /**
-     * For test only: prints in the console how many bodies there are in the scene
-     * @private
-     */
-    this.countBodies = function () {
-        const bodies = Matter.Composite.allBodies(world);
-        console.log("The bodies are:", bodies)
-    }
-
-
-    /**
-     * Finds the closest ball to the target
-     * @private
-     * @returns {*} body in matter.js, the closest ball
-     */
-    function findClosestBall(balls) {
-        let distances = [];
-
-        // loop over balls and find the distance to the target
-        for (let i = 0; i < balls.length; i++) {
-            let ball = balls[i];
-            let distance = findDistance(ball, target);
-            distances.push(distance);
+                },
+            );
         }
 
-        // find the closest ball
-        const indexClosestBall = indexOfMin(distances);
-        return balls[indexClosestBall]
-    }
+        #closestBallToTarget() {
+            let closestBall = null;
+            let closestDistance = Infinity;
 
+            for (const ball of this.#balls) {
+                const distance = Matter.Vector.magnitudeSquared(
+                    Matter.Vector.sub(ball.position, this.#target.position),
+                );
 
-    /**
-     * Creates a target, stops the balls, then draws the ball closest to the target
-     * @async
-     * @returns {Promise<Object>} ballDrawn - Dictionary  of the ball drawn
-     * @returns {string} ballDrawn.colourRobot - CSS colour of the ball drawn
-     * @returns {string} ballDrawn.colourHuman - Colour of the ball drawn (e.g. MediumBlue becomes blue)
-     */
-    this.drawBall = async function () {
-        // convert seconds to milliseconds
-        const timeMilli = timeSeconds * 1000;
+                if (distance < closestDistance) {
+                    closestBall = ball;
+                    closestDistance = distance;
+                }
+            }
 
-        // show the target
-        target.render.visible = true;
+            return closestBall;
+        }
 
-        // stop the balls
-        await sleep(timeMilli);
-        this.stop();
+        #limitSpeed() {
+            for (const ball of this.#balls) {
+                const x = Matter.Common.clamp(ball.velocity.x, -MAX_SPEED, MAX_SPEED);
+                const y = Matter.Common.clamp(ball.velocity.y, -MAX_SPEED, MAX_SPEED);
 
-        // find the closest ball
-        const closestBall = findClosestBall(this._balls);
-
-        // get the colour name of the ball and its human-readable colour name
-        const colourRobot = closestBall.render.fillStyle;
-        const colourHuman = findHumanColour(colourRobot);
-
-        // highlight the closest ball
-        await sleep(1000);
-        closestBall.render.strokeStyle = drawnBallHighlight;
-        closestBall.render.lineWidth = drawnBallThickness;
-
-        return {
-            'colourRobot': colourRobot,
-            'colourHuman': colourHuman
+                if (x !== ball.velocity.x || y !== ball.velocity.y) {
+                    Matter.Body.setVelocity(ball, {x: x, y: y});
+                }
+            }
         }
     }
 
-    //initial number of balls
-    this._balls = []
-    this.balls = []
-
-
-    // get the element on the html page where the bingo-blower should be displayed
-    const canvas = document.getElementById(el);
-
-    // create engine
-    const engine = Matter.Engine.create();
-
-    // create the renderer
-    const render = Matter.Render.create(
-        {
-            canvas: canvas,
-            engine: engine,
-            options: {
-                width: width,
-                height: width,
-                wireframes: false,
-                background: 'White'
-            }
-        }
-    );
-
-    // create runner
-    const runner = Matter.Runner.create({
-        isFixed: true,
-        delta: 15
-    });
-    Matter.Runner.run(runner, engine);
-    Matter.Render.run(render);
-
-    // create scene
-    const world = engine.world;
-
-    // define the walls
-    const topWall = Matter.Bodies.rectangle(width / 2, 0, width, wallWidth, {
-            render: {
-                fillStyle: 'LightGray',
-            },
-            isStatic: true
-        }
-    );
-
-    const leftWall = Matter.Bodies.rectangle(0, width / 2, wallWidth, width, {
-            render: {
-                fillStyle: 'LightGray',
-            },
-            isStatic: true
-        }
-    );
-
-    const rightWall = Matter.Bodies.rectangle(width, width / 2, wallWidth, width, {
-            render: {
-                fillStyle: 'LightGray',
-            },
-            isStatic: true
-        }
-    );
-
-    const bottomWallRight = Matter.Bodies.polygon(
-        width,
-        1.4 * width,
-        3,
-        width,
-        {
-            angle: 0.361799, // shift it by 20degree = this is in rads
-            render: {
-                fillStyle: 'LightGray',
-            },
-            isStatic: true
-        }
-    );
-
-    const bottomWallLeft = Matter.Bodies.polygon(
-        0,
-        1.4 * width,
-        3,
-        -width,
-        {
-            angle: -0.361799,
-            render: {
-                fillStyle: 'LightGray',
-            },
-            isStatic: true
-        }
-    );
-
-
-    // add the walls to the scene
-    Matter.World.add(world, [topWall, leftWall, rightWall, bottomWallLeft, bottomWallRight]);
-
-
-    // create the wind source
-    const radiusWind = 0.1 * width;
-    const windSource = Matter.Bodies.circle(
-        width / 2,
-        width,
-        radiusWind,
-        {
-            isStatic: true,
-            render: {
-                visible: true,
-                fillStyle: 'LightGray',
-            },
-            plugin: {
-                attractors: [
-                    function (bodyA, bodyB) {
-                        // compute the distance between the bodies
-                        const diffx = Math.abs(bodyA.position.x - bodyB.position.x);
-                        const diffy = Math.abs(bodyA.position.y) - Math.abs(bodyB.position.y);
-
-                        // recompute the distances as a proportion of the canvas
-                        // let xprop = diffx / width;
-                        const yprop = diffy / width;
-                        // if yprop ~ 1, the bodies are as far as possible; if yprop ~ 0 they are a close as possible
-
-                        // blow the wind only if bodyB is just above bodyB
-                        // apply force proportional to distance between ball and wind source
-                        const yforce = (diffx < 2 * radiusWind) ? (1 / yprop) * windForce : 0;
-
-                        return {
-                            x: 0,
-                            y: -yforce,
-                        };
-                    }
-                ]
-            }
-        }
-    );
-
-    // add the wind source to the scene
-    Matter.World.add(world, windSource);
-
-    // add mouse
-    const mouse = Matter.Mouse.create(render.canvas);
-    mouse.element.removeEventListener("mousewheel", mouse.mousewheel);
-    mouse.element.removeEventListener("DOMMouseScroll", mouse.mousewheel);
-    mouse.element.removeEventListener('touchmove', mouse.mousemove);
-    mouse.element.removeEventListener('touchstart', mouse.mousedown);
-    mouse.element.removeEventListener('touchend', mouse.mouseup);
-
-    const mouseConstraint = Matter.MouseConstraint.create(engine, {
-        element: canvas,
-        mouse: mouse,
-        constraint: {
-            stiffness: 0.1,
-            render: {
-                visible: false
-            }
-        }
-    });
-
-    // create the target
-    const target = createTarget();
-    Matter.World.add(world, target);
-
-    // limit the speed of the balls
-    const limitMaxSpeed = () => {
-        const bodies = this._balls;
-
-        bodies.forEach(body => {
-            let maxSpeed = 20;
-            if (body.velocity.x > maxSpeed) {
-                Matter.Body.setVelocity(body, {x: maxSpeed, y: body.velocity.y});
-            }
-
-            if (body.velocity.x < -maxSpeed) {
-                Matter.Body.setVelocity(body, {x: -maxSpeed, y: body.velocity.y});
-            }
-
-            if (body.velocity.y > maxSpeed) {
-                Matter.Body.setVelocity(body, {x: body.velocity.x, y: maxSpeed});
-            }
-
-            if (body.velocity.y < -maxSpeed) {
-                Matter.Body.setVelocity(body, {x: body.velocity.x, y: -maxSpeed});
-            }
-        });
-    }
-
-    Matter.Events.on(engine, 'beforeUpdate', limitMaxSpeed);
-
-    // add style
-    const style = document.createElement('style');
-    style.innerHTML =
-        `@keyframes reveal {
-    from {
-        filter: blur(100px);
-    }
-    to {
-        filter: blur(0px);
-    }
-}
-
-.blower{
-    animation-name: reveal;
-    animation-duration: 3s;
-    animation-fill-mode: forwards;
-}`
-
-    document.head.appendChild(style);
-}
+    window.BingoBlower = BingoBlower;
+})();
