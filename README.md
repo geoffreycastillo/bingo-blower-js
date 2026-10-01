@@ -1,6 +1,10 @@
 # bingo-blower.js
 A virtual bingo-blower for ambiguity and risk experiments.
 
+![bingo-blower.js recording](demo/bingo-blower.png)
+
+\* This is a recording: the real-time version in the [demo](https://geoffreycastillo.com/bingo-blower-js-demo/) looks better.
+
 ## Demo
 https://geoffreycastillo.com/bingo-blower-js-demo/
 
@@ -136,10 +140,10 @@ If you use `bingo-blower.js`, please cite our paper: [Andersson, Castillo and We
 
 ## Bugs? Suggestions?
 
-[Open an issue](https://github.com/geoffreycastillo/bingo-blower-js/issues) or a [pull request](https://github.com/geoffreycastillo/bingo-blower-js/pulls), or email me at [`geoffrey.castillo@univie.ac.at`](mailto:geoffrey.castillo@univie.ac.at).
+[Open an issue](https://github.com/geoffreycastillo/bingo-blower-js/issues) or a [pull request](https://github.com/geoffreycastillo/bingo-blower-js/pulls), or email me at [`geoffrey.castillo@ntu.ac.uk`](mailto:geoffrey.castillo@ntu.ac.uk).
 
 ## Licence
 
 `bingo-blower.js` is licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html).
 
-Copyright (c) 2022 Geoffrey Castillo
+Copyright (c) 2022-2026 Geoffrey Castillo
