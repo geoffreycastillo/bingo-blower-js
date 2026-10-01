@@ -38,6 +38,7 @@
     const BOTTOM_WALL_ANGLE = 0.361799;
     const MAX_SPEED = 20;
     const HIGHLIGHT_DELAY_MS = 1000;
+    const FORCE_SCALE = (15 / (1000 / 60)) ** 2;
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -121,6 +122,7 @@
             }
 
             this.#engine = Matter.Engine.create();
+            this.#engine.gravity.scale *= FORCE_SCALE;
 
             this.#render = Matter.Render.create({
                 canvas: canvas,
@@ -134,8 +136,7 @@
             });
 
             this.#runner = Matter.Runner.create({
-                isFixed: true,
-                delta: 15,
+                maxUpdates: 3,
             });
 
             this.#target = this.#createTarget();
@@ -146,8 +147,7 @@
             ]);
 
             this.#mouse = Matter.Mouse.create(canvas);
-            canvas.removeEventListener('mousewheel', this.#mouse.mousewheel);
-            canvas.removeEventListener('DOMMouseScroll', this.#mouse.mousewheel);
+            canvas.removeEventListener('wheel', this.#mouse.mousewheel);
             this.#mouseConstraint = Matter.MouseConstraint.create(this.#engine, {
                 mouse: this.#mouse,
                 constraint: {
@@ -352,6 +352,7 @@
         #createWindSource() {
             const {width, windForce} = this.#options;
             const radius = 0.1 * width;
+            const force = windForce * FORCE_SCALE;
 
             return Matter.Bodies.circle(width / 2, width, radius, {
                 isStatic: true,
@@ -367,7 +368,7 @@
 
                             return {
                                 x: 0,
-                                y: isInWind ? -windForce * width / distanceY : 0,
+                                y: isInWind ? -force * width / distanceY : 0,
                             };
                         },
                     ],
