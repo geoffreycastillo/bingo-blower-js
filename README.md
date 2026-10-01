@@ -13,9 +13,9 @@ https://geoffreycastillo.com/bingo-blower-js-demo/
 Include both, for example from [jsDelivr](https://www.jsdelivr.com/):
 ```html
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v1.2.0/bingo-blower.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v1.0.0/bingo-blower.min.js"></script>
 ```
-Always pin the version (`@v1.2.0` above), so that a new release cannot change your experiment while it is running.
+Always pin the version (`@v1.0.0` above), so that a new release cannot change your experiment while it is running.
 You can also download `bingo-blower.js` from the [releases](https://github.com/geoffreycastillo/bingo-blower-js/releases) and host it yourself.
 
 ## Quick start
@@ -25,7 +25,7 @@ You can also download `bingo-blower.js` from the [releases](https://github.com/g
 The ball drawn is: <span id="result"></span>
 
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v1.2.0/bingo-blower.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v1.0.0/bingo-blower.min.js"></script>
 <script>
     const blower = new BingoBlower();
     blower.addBalls([1, 2, 3]);
@@ -43,6 +43,8 @@ See the [wiki](https://github.com/geoffreycastillo/bingo-blower-js/wiki) for adv
 Create a bingo-blower with bigger balls: `new BingoBlower({ballSize: 30})` (you will also need to increase `windForce` or decrease `density`, because bigger balls are heavier!)
 
 Blur the bingo-blower for the first 3 seconds, so that the balls are harder to count: `new BingoBlower({revealSeconds: 3})`
+
+Frost the edges of the bingo-blower, so that the balls there cannot be counted, even from a screenshot: `new BingoBlower({frostedEdges: true})`
 
 Add a lot of balls: `blower.addBalls([10, 15, 20, 25])`
 
@@ -76,8 +78,16 @@ All options are optional.
 | `drawnBallThickness` | `10` | Thickness of the circle around the ball drawn |
 | `timeSeconds` | `3` | How long the balls keep tumbling after the target appears |
 | `revealSeconds` | `0` | How long the blower takes to go from blurry to sharp (0 for no blur) |
+| `frostedEdges` | `false` | Whether the edges of the blower are frosted, so that the balls there cannot be counted |
+| `edgeBlur` | `60` | How much the frosted edges are blurred: roughly the size, in pixels, of the area each blurred pixel averages over |
+| `edgeBand` | `110` | How far the frosted edges reach into the blower, in pixels |
+| `edgeFrost` | `0.8` | How much the frosted edges are washed out to white, from 0 (not at all) to 1 (completely) |
 
 See the [matter.js documentation](https://brm.io/matter-js/docs/classes/Body.html) for details on `density`, `friction`, `frictionAir`, `frictionStatic` and `restitution`.
+
+`edgeBlur`, `edgeBand` and `edgeFrost` are only used when `frostedEdges` is `true`.
+Their defaults are the recommended setting: change them only if you want to fine-tune the frosted edges.
+The walls, the target and the ball drawn are never frosted.
 
 ### `blower.addBalls(ballList, colours)`
 
@@ -109,26 +119,6 @@ Mouse control is off by default.
 ### `blower.destroy()`
 
 Stops the simulation, so that a new bingo-blower can be created on the same canvas. Cancels a draw in progress.
-
-## Changes in v1.2
-
-- `blower.balls` is removed, so that subjects cannot read the number of balls from the browser console.
-  If you need the number of balls, keep track of it in your own code.
-  See the [wiki](https://github.com/geoffreycastillo/bingo-blower-js/wiki) for how to make the number of balls harder to find.
-
-## Changes in v1.1
-
-- No longer needs the `matter-attractors` plugin: the wind is built in. The simulation is unchanged.
-- `bingo-blower.js` can be loaded before or after matter.js.
-
-## Changes in v1
-
-- Uses matter.js 0.20. The balls now move at the same speed whatever the screen refresh rate.
-- Gravity and wind are rescaled so that, at 60Hz, the balls behave as in v0.
-- `drawBall()` returns `{colour, label}` instead of `{colourRobot, colourHuman}`.
-- `balls` is a list of `{colour, label, count}` instead of `[count, colour, label]`.
-- The blur at the start is now the `revealSeconds` option instead of the `blower` CSS class.
-- `stop()`, `start()` and `countBodies()` are removed.
 
 ## Limitations
 

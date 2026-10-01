@@ -17,6 +17,10 @@
         drawnBallThickness: 10,
         timeSeconds: 3,
         revealSeconds: 0,
+        frostedEdges: false,
+        edgeBlur: 60,
+        edgeBand: 110,
+        edgeFrost: 0.8,
     };
 
     const DEFAULT_COLOURS = ['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna'];
@@ -33,6 +37,8 @@
     };
 
     const WALL_COLOUR = 'LightGray';
+    const BACKGROUND_COLOUR = 'White';
+    const EDGE_FEATHER = 55;
     const BOTTOM_WALL_ANGLE = 0.361799;
     const MAX_SPEED = 20;
     const HIGHLIGHT_DELAY_MS = 1000;
@@ -80,6 +86,7 @@
         #mouse;
         #mouseConstraint;
         #windSource;
+        #walls;
         #balls = [];
         #drawnBall = null;
         #drawId = 0;
@@ -103,6 +110,10 @@
          * @param {number} [options.drawnBallThickness=10] - Thickness of the circle around the ball drawn
          * @param {number} [options.timeSeconds=3] - How long the balls keep tumbling after the target appears
          * @param {number} [options.revealSeconds=0] - How long the blower takes to go from blurry to sharp (0 for no blur)
+         * @param {boolean} [options.frostedEdges=false] - Whether the edges of the blower are frosted, so that the balls there cannot be counted
+         * @param {number} [options.edgeBlur=60] - How much the frosted edges are blurred: roughly the size, in pixels, of the area each blurred pixel averages over
+         * @param {number} [options.edgeBand=110] - How far the frosted edges reach into the blower, in pixels
+         * @param {number} [options.edgeFrost=0.8] - How much the frosted edges are washed out to white, from 0 (not at all) to 1 (completely)
          */
         constructor(options = {}) {
             this.#options = {...DEFAULT_OPTIONS, ...options};
@@ -123,7 +134,7 @@
                     width: width,
                     height: width,
                     wireframes: false,
-                    background: 'White',
+                    background: BACKGROUND_COLOUR,
                 },
             });
 
@@ -131,10 +142,11 @@
                 maxUpdates: 3,
             });
 
+            this.#walls = this.#createWalls();
             this.#windSource = this.#createWindSource();
             this.#target = this.#createTarget();
             Matter.Composite.add(this.#engine.world, [
-                ...this.#createWalls(),
+                ...this.#walls,
                 this.#windSource,
                 this.#target,
             ]);
@@ -158,6 +170,10 @@
 
             Matter.Render.run(this.#render);
             Matter.Runner.run(this.#runner, this.#engine);
+
+            if (this.#options.frostedEdges) {
+                this.#frostEdges();
+            }
 
             if (revealSeconds > 0) {
                 canvas.animate([{filter: 'blur(100px)'}, {filter: 'blur(0px)'}], revealSeconds * 1000);
@@ -294,6 +310,7 @@
             Matter.Render.stop(this.#render);
             Matter.Runner.stop(this.#runner);
             Matter.Events.off(this.#engine);
+            Matter.Events.off(this.#render);
             Matter.Composite.clear(this.#engine.world, false);
             Matter.Engine.clear(this.#engine);
         }
@@ -304,6 +321,101 @@
 
         #unfreeze() {
             this.#runner.enabled = true;
+        }
+
+        #frostEdges() {
+            const {width, edgeFrost} = this.#options;
+            const mask = this.#createEdgeMask();
+            const blurSteps = this.#createBlurSteps();
+            const band = this.#createCanvas(width);
+            const bandContext = band.getContext('2d');
+            const context = this.#render.context;
+
+            Matter.Events.on(this.#render, 'afterRender', () => {
+                let source = this.#render.canvas;
+                for (const step of blurSteps) {
+                    this.#drawScaled(source, step);
+                    source = step;
+                }
+                for (const step of blurSteps.slice(0, -1).reverse()) {
+                    this.#drawScaled(source, step);
+                    source = step;
+                }
+
+                bandContext.globalCompositeOperation = 'source-over';
+                bandContext.fillStyle = BACKGROUND_COLOUR;
+                bandContext.fillRect(0, 0, width, width);
+                bandContext.drawImage(source, 0, 0, width, width);
+
+                bandContext.globalAlpha = edgeFrost;
+                bandContext.fillRect(0, 0, width, width);
+                bandContext.globalAlpha = 1;
+
+                bandContext.globalCompositeOperation = 'destination-in';
+                bandContext.drawImage(mask, 0, 0);
+
+                context.drawImage(band, 0, 0);
+
+                const sharpBodies = [...this.#walls, this.#windSource, this.#target];
+                if (this.#drawnBall) {
+                    sharpBodies.push(this.#drawnBall);
+                }
+                Matter.Render.bodies(this.#render, sharpBodies, context);
+            });
+        }
+
+        #createEdgeMask() {
+            const {width, edgeBand} = this.#options;
+            const mask = this.#createCanvas(width);
+            const context = mask.getContext('2d');
+            const span = edgeBand + EDGE_FEATHER;
+            const gradients = [
+                context.createLinearGradient(0, 0, 0, span),
+                context.createLinearGradient(0, width, 0, width - span),
+                context.createLinearGradient(0, 0, span, 0),
+                context.createLinearGradient(width, 0, width - span, 0),
+            ];
+
+            context.globalCompositeOperation = 'lighter';
+            for (const gradient of gradients) {
+                gradient.addColorStop(0, 'black');
+                gradient.addColorStop(edgeBand / span, 'black');
+                gradient.addColorStop(1, 'transparent');
+                context.fillStyle = gradient;
+                context.fillRect(0, 0, width, width);
+            }
+
+            return mask;
+        }
+
+        #createBlurSteps() {
+            const {width, edgeBlur} = this.#options;
+            const steps = [];
+            if (edgeBlur <= 0) {
+                return steps;
+            }
+
+            const smallestSize = Math.max(2, Math.round(width / edgeBlur));
+            let size = width;
+            while (size > smallestSize) {
+                size = Math.max(smallestSize, Math.round(size / 2));
+                steps.push(this.#createCanvas(size));
+            }
+
+            return steps;
+        }
+
+        #createCanvas(size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            return canvas;
+        }
+
+        #drawScaled(source, destination) {
+            const context = destination.getContext('2d');
+            context.clearRect(0, 0, destination.width, destination.height);
+            context.drawImage(source, 0, 0, destination.width, destination.height);
         }
 
         #createWalls() {

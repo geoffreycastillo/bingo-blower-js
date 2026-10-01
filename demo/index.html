@@ -71,6 +71,10 @@
     <p><label>drawnBallThickness <input type="number" step="any" name="drawnBallThickness" value="10"></label></p>
     <p><label>timeSeconds <input type="number" step="any" name="timeSeconds" value="3"></label></p>
     <p><label>revealSeconds <input type="number" step="any" name="revealSeconds" value="0"></label></p>
+    <p><label>frostedEdges <input type="checkbox" name="frostedEdges"></label></p>
+    <p><label>edgeBlur <input type="number" step="any" name="edgeBlur" value="60"></label></p>
+    <p><label>edgeBand <input type="number" step="any" name="edgeBand" value="110"></label></p>
+    <p><label>edgeFrost <input type="number" step="any" name="edgeFrost" value="0.8"></label></p>
     <button type="submit">Rebuild the blower</button>
 </form>
 
@@ -98,7 +102,13 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
     function readOptions() {
         const options = {};
         for (const input of document.querySelectorAll('#options input')) {
-            options[input.name] = input.type === 'number' ? Number(input.value) : input.value;
+            if (input.type === 'checkbox') {
+                options[input.name] = input.checked;
+            } else if (input.type === 'number') {
+                options[input.name] = Number(input.value);
+            } else {
+                options[input.name] = input.value;
+            }
         }
         return options;
     }
