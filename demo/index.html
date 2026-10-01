@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>bingo-blower.js demo</title>
+</head>
+<body>
+
+<h1>bingo-blower.js demo</h1>
+<p>See the <a href="https://github.com/geoffreycastillo/bingo-blower-js">README</a> for installation and documentation.</p>
+
+<canvas id="world" class="blower"></canvas>
+
+<p>
+    <button type="button" id="draw">Draw a ball</button>
+    <button type="button" id="reset">Reset the blower</button>
+    <button type="button" id="mouse-on">Mouse control on</button>
+    <button type="button" id="mouse-off">Mouse control off</button>
+</p>
+<p>The ball drawn is: <span id="result"></span></p>
+
+<h2>Balls</h2>
+<table>
+    <tr>
+        <td>Red</td>
+        <td><span class="count" data-colour="Red"></span></td>
+        <td><button type="button" class="add" data-colour="Red">+1</button></td>
+        <td><button type="button" class="remove" data-colour="Red">-1</button></td>
+    </tr>
+    <tr>
+        <td>MediumBlue</td>
+        <td><span class="count" data-colour="MediumBlue"></span></td>
+        <td><button type="button" class="add" data-colour="MediumBlue">+1</button></td>
+        <td><button type="button" class="remove" data-colour="MediumBlue">-1</button></td>
+    </tr>
+    <tr>
+        <td>Gold</td>
+        <td><span class="count" data-colour="Gold"></span></td>
+        <td><button type="button" class="add" data-colour="Gold">+1</button></td>
+        <td><button type="button" class="remove" data-colour="Gold">-1</button></td>
+    </tr>
+    <tr>
+        <td>LimeGreen</td>
+        <td><span class="count" data-colour="LimeGreen"></span></td>
+        <td><button type="button" class="add" data-colour="LimeGreen">+1</button></td>
+        <td><button type="button" class="remove" data-colour="LimeGreen">-1</button></td>
+    </tr>
+    <tr>
+        <td>Sienna</td>
+        <td><span class="count" data-colour="Sienna"></span></td>
+        <td><button type="button" class="add" data-colour="Sienna">+1</button></td>
+        <td><button type="button" class="remove" data-colour="Sienna">-1</button></td>
+    </tr>
+</table>
+
+<h2>Options</h2>
+<form id="options">
+    <p><label>width <input type="number" step="any" name="width" value="500"></label></p>
+    <p><label>wallWidth <input type="number" step="any" name="wallWidth" value="60"></label></p>
+    <p><label>ballSize <input type="number" step="any" name="ballSize" value="10"></label></p>
+    <p><label>density <input type="number" step="any" name="density" value="0.004"></label></p>
+    <p><label>friction <input type="number" step="any" name="friction" value="0.02"></label></p>
+    <p><label>frictionAir <input type="number" step="any" name="frictionAir" value="0.001"></label></p>
+    <p><label>frictionStatic <input type="number" step="any" name="frictionStatic" value="0.001"></label></p>
+    <p><label>restitution <input type="number" step="any" name="restitution" value="0.7"></label></p>
+    <p><label>windForce <input type="number" step="any" name="windForce" value="0.0009"></label></p>
+    <p><label>targetColour <input type="text" name="targetColour" value="LightGray"></label></p>
+    <p><label>targetWidth <input type="number" step="any" name="targetWidth" value="50"></label></p>
+    <p><label>targetThickness <input type="number" step="any" name="targetThickness" value="10"></label></p>
+    <p><label>drawnBallHighlight <input type="text" name="drawnBallHighlight" value="Black"></label></p>
+    <p><label>drawnBallThickness <input type="number" step="any" name="drawnBallThickness" value="10"></label></p>
+    <p><label>timeSeconds <input type="number" step="any" name="timeSeconds" value="3"></label></p>
+    <button type="submit">Rebuild the blower</button>
+</form>
+
+<h2>Minimal example</h2>
+<pre>
+&lt;canvas id="world"&gt;&lt;/canvas&gt;
+&lt;button type="button" id="draw"&gt;Draw a ball&lt;/button&gt;
+The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
+
+&lt;script src="https://cdn.jsdelivr.net/npm/matter-js@0.18.0/build/matter.min.js"&gt;&lt;/script&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/matter-attractors@0.1.6/build/matter-attractors.min.js"&gt;&lt;/script&gt;
+&lt;script src="bingo-blower.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    let blower = new BingoBlower();
+    blower.addBalls([18, 6, 3]);
+    document.getElementById('draw').addEventListener('click',
+        async () =&gt; {
+            const draw = await blower.drawBall();
+            document.getElementById('result').innerHTML = draw.colourHuman;
+        }
+    );
+&lt;/script&gt;
+</pre>
+
+<script src="https://cdn.jsdelivr.net/npm/matter-js@0.18.0/build/matter.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/matter-attractors@0.1.6/build/matter-attractors.min.js"></script>
+<script src="../bingo-blower.js"></script>
+<script>
+    function readOptions() {
+        const options = {};
+        for (const input of document.querySelectorAll('#options input')) {
+            options[input.name] = input.type === 'number' ? Number(input.value) : input.value;
+        }
+        return options;
+    }
+
+    function showCounts() {
+        for (const span of document.querySelectorAll('.count')) {
+            const entry = blower.balls.find(count => count[1] === span.dataset.colour);
+            span.textContent = entry ? entry[0] : 0;
+        }
+    }
+
+    function rebuildBlower(event) {
+        event.preventDefault();
+        const ballCounts = blower.balls;
+        blower.destroy();
+        blower = new BingoBlower(readOptions());
+        blower.addBalls(ballCounts.map(count => count[0]), ballCounts.map(count => count[1]));
+        document.getElementById('result').textContent = '';
+        showCounts();
+    }
+
+    let blower = new BingoBlower(readOptions());
+    blower.addBalls([18, 6, 3]);
+    showCounts();
+
+    document.getElementById('draw').addEventListener('click', async () => {
+        const draw = await blower.drawBall();
+        document.getElementById('result').textContent = draw.colourHuman;
+    });
+
+    document.getElementById('reset').addEventListener('click', () => {
+        blower.reset();
+        document.getElementById('result').textContent = '';
+    });
+
+    document.getElementById('mouse-on').addEventListener('click', () => blower.addMouseControl());
+    document.getElementById('mouse-off').addEventListener('click', () => blower.removeMouseControl());
+
+    for (const button of document.querySelectorAll('.add')) {
+        button.addEventListener('click', () => {
+            blower.addBalls([1], [button.dataset.colour]);
+            showCounts();
+        });
+    }
+
+    for (const button of document.querySelectorAll('.remove')) {
+        button.addEventListener('click', () => {
+            blower.removeBalls([1], [button.dataset.colour]);
+            showCounts();
+        });
+    }
+
+    document.getElementById('options').addEventListener('submit', rebuildBlower);
+</script>
+
+</body>
+</html>

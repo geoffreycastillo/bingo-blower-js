@@ -3,8 +3,7 @@
  * @class
  * @param {Object} options
  * @param {string} [options.el = 'world'] - Element where bingo-blower will be inserted
- * @param {number} [options.width = 500] - Width of the bingo-blower
- * @param {number} [options.height = 500] - Height of the bingo-blower
+ * @param {number} [options.width = 500] - Width and height of the bingo-blower, which is a square
  * @param {number} [options.wallWidth = 60] - Width of the walls
  * @param {number} [options.ballSize = 10] - Size of the balls
  * @param {number} [options.density = 0.004] - Density of the balls
@@ -25,7 +24,6 @@
 function BingoBlower({
                          el = 'world',
                          width = 500,
-                         height = 500,
                          wallWidth = 60,
                          ballSize = 10,
                          density = 0.004,
@@ -45,6 +43,8 @@ function BingoBlower({
     Matter.use(
         'matter-attractors'
     );
+
+    const defaultColours = ['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna'];
 
 
     /**
@@ -133,6 +133,24 @@ function BingoBlower({
         return colourHuman
     }
 
+
+    /**
+     * Changes the number of balls of a colour in a list of [number of balls, CSS ball colour, human ball colour]
+     * @private
+     * @param ballCounts
+     * @param colourCSS
+     * @param change - number of balls to add (negative to remove)
+     */
+    function updateBallCount(ballCounts, colourCSS, change) {
+        const entry = ballCounts.find(count => count[1] === colourCSS);
+
+        if (entry) {
+            entry[0] += change;
+        } else {
+            ballCounts.push([change, colourCSS, findHumanColour(colourCSS)]);
+        }
+    }
+
     /**
      * Adds mouse control
      */
@@ -163,7 +181,7 @@ function BingoBlower({
      * @param {(string|number[])} ballList - List of ball numbers, or its base64 representation
      * @param {string[]}  [colours=['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna']] - List of ball colours
      */
-    this.addBalls = function (ballList, colours = ['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna']) {
+    this.addBalls = function (ballList, colours = defaultColours) {
         try {
             ballList = JSON.parse(atob(ballList))
         } catch (e) {
@@ -174,19 +192,18 @@ function BingoBlower({
         }
 
         let balls = [];
-        let numbersColours = [];
 
         for (let i = 0; i < ballList.length; i++) {
             const ballNumber = ballList[i];
             const ballColour = colours[i];
 
-            numbersColours.push([ballNumber, ballColour, findHumanColour(ballColour)]);
+            updateBallCount(this.balls, ballColour, ballNumber);
 
             for (let j = 0; j < ballNumber; j++) {
 
                 balls.push(Matter.Bodies.circle(
                     getRndInteger(wallWidth + 10, width - wallWidth - 10),
-                    getRndInteger(400, height - 50),
+                    getRndInteger(0.8 * width, 0.9 * width),
                     ballSize,
                     {
                         density: density,
@@ -204,8 +221,56 @@ function BingoBlower({
         }
 
         Matter.World.add(world, balls);
-        this.balls = numbersColours;
         this._balls.push(...balls);
+    }
+
+
+    /**
+     * Removes balls from the scene
+     * @param {(string|number[])} ballList - List of ball numbers to remove, or its base64 representation
+     * @param {string[]}  [colours=['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna']] - List of ball colours
+     */
+    this.removeBalls = function (ballList, colours = defaultColours) {
+        try {
+            ballList = JSON.parse(atob(ballList))
+        } catch (e) {
+        }
+
+        if (ballList.length > colours.length) {
+            throw "You should specify more colours!"
+        }
+
+        for (let i = 0; i < ballList.length; i++) {
+            const ballNumber = ballList[i];
+            const ballColour = colours[i];
+
+            const ballsToRemove = this._balls
+                .filter(ball => ball.render.fillStyle === ballColour)
+                .slice(0, ballNumber);
+
+            Matter.World.remove(world, ballsToRemove);
+            this._balls = this._balls.filter(ball => !ballsToRemove.includes(ball));
+            updateBallCount(this.balls, ballColour, -ballsToRemove.length);
+        }
+    }
+
+
+    /**
+     * Stops the simulation and removes the bingo-blower, so that a new one can be created on the same element
+     */
+    this.destroy = function () {
+        this.removeMouseControl();
+        mouse.element.removeEventListener('mousemove', mouse.mousemove);
+        mouse.element.removeEventListener('mousedown', mouse.mousedown);
+        mouse.element.removeEventListener('mouseup', mouse.mouseup);
+
+        Matter.Render.stop(render);
+        Matter.Runner.stop(runner);
+        Matter.Events.off(engine);
+        Matter.World.clear(world, false);
+        Matter.Engine.clear(engine);
+
+        style.remove();
     }
 
 
@@ -242,10 +307,10 @@ function BingoBlower({
     function createTarget() {
         // if we want a random target:
         // const x = wallWidth + Math.random() * (width - 2 * wallWidth);
-        // const y = wallWidth + Math.random() * (height - 70);
+        // const y = wallWidth + Math.random() * (width - 70);
 
         const x = width / 2;
-        const y = height / 2;
+        const y = width / 2;
 
         const crossOptions = {
             render:
@@ -369,6 +434,7 @@ function BingoBlower({
 
     //initial number of balls
     this._balls = []
+    this.balls = []
 
 
     // get the element on the html page where the bingo-blower should be displayed
@@ -384,7 +450,7 @@ function BingoBlower({
             engine: engine,
             options: {
                 width: width,
-                height: height,
+                height: width,
                 wireframes: false,
                 background: 'White'
             }
@@ -411,7 +477,7 @@ function BingoBlower({
         }
     );
 
-    const leftWall = Matter.Bodies.rectangle(0, height / 2, wallWidth, height, {
+    const leftWall = Matter.Bodies.rectangle(0, width / 2, wallWidth, width, {
             render: {
                 fillStyle: 'LightGray',
             },
@@ -419,7 +485,7 @@ function BingoBlower({
         }
     );
 
-    const rightWall = Matter.Bodies.rectangle(width, height / 2, wallWidth, height, {
+    const rightWall = Matter.Bodies.rectangle(width, width / 2, wallWidth, width, {
             render: {
                 fillStyle: 'LightGray',
             },
@@ -429,7 +495,7 @@ function BingoBlower({
 
     const bottomWallRight = Matter.Bodies.polygon(
         width,
-        height + 200,
+        1.4 * width,
         3,
         width,
         {
@@ -443,7 +509,7 @@ function BingoBlower({
 
     const bottomWallLeft = Matter.Bodies.polygon(
         0,
-        height + 200,
+        1.4 * width,
         3,
         -width,
         {
@@ -461,10 +527,10 @@ function BingoBlower({
 
 
     // create the wind source
-    const radiusWind = 50;
+    const radiusWind = 0.1 * width;
     const windSource = Matter.Bodies.circle(
         width / 2,
-        height,
+        width,
         radiusWind,
         {
             isStatic: true,
@@ -481,7 +547,7 @@ function BingoBlower({
 
                         // recompute the distances as a proportion of the canvas
                         // let xprop = diffx / width;
-                        const yprop = diffy / height;
+                        const yprop = diffy / width;
                         // if yprop ~ 1, the bodies are as far as possible; if yprop ~ 0 they are a close as possible
 
                         // blow the wind only if bodyB is just above bodyB
