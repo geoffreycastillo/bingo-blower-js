@@ -105,23 +105,33 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
 
     function showCounts() {
         for (const span of document.querySelectorAll('.count')) {
-            const entry = blower.balls.find(count => count.colour === span.dataset.colour);
-            span.textContent = entry ? entry.count : 0;
+            span.textContent = counts[span.dataset.colour];
         }
+    }
+
+    function addAllBalls() {
+        const colours = Object.keys(counts);
+        blower.addBalls(colours.map(colour => counts[colour]), colours);
     }
 
     function rebuildBlower(event) {
         event.preventDefault();
-        const ballCounts = blower.balls;
         blower.destroy();
         blower = new BingoBlower(readOptions());
-        blower.addBalls(ballCounts.map(count => count.count), ballCounts.map(count => count.colour));
+        addAllBalls();
         document.getElementById('result').textContent = '';
-        showCounts();
     }
 
+    const counts = {
+        Red: 18,
+        MediumBlue: 6,
+        Gold: 3,
+        LimeGreen: 0,
+        Sienna: 0,
+    };
+
     let blower = new BingoBlower(readOptions());
-    blower.addBalls([18, 6, 3]);
+    addAllBalls();
     showCounts();
 
     document.getElementById('draw').addEventListener('click', async () => {
@@ -142,13 +152,18 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
     for (const button of document.querySelectorAll('.add')) {
         button.addEventListener('click', () => {
             blower.addBalls([1], [button.dataset.colour]);
+            counts[button.dataset.colour]++;
             showCounts();
         });
     }
 
     for (const button of document.querySelectorAll('.remove')) {
         button.addEventListener('click', () => {
+            if (counts[button.dataset.colour] === 0) {
+                return;
+            }
             blower.removeBalls([1], [button.dataset.colour]);
+            counts[button.dataset.colour]--;
             showCounts();
         });
     }

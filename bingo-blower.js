@@ -62,13 +62,6 @@
     }
 
     /**
-     * @typedef {Object} BallCount
-     * @property {string} colour - CSS colour of the balls
-     * @property {string} label - Human-readable colour (e.g. 'MediumBlue' becomes 'blue')
-     * @property {number} count - Number of balls of this colour
-     */
-
-    /**
      * @typedef {Object} Draw
      * @property {string} colour - CSS colour of the ball drawn
      * @property {string} label - Human-readable colour of the ball drawn (e.g. 'MediumBlue' becomes 'blue')
@@ -169,27 +162,6 @@
             if (revealSeconds > 0) {
                 canvas.animate([{filter: 'blur(100px)'}, {filter: 'blur(0px)'}], revealSeconds * 1000);
             }
-        }
-
-        /**
-         * Number of balls of each colour currently in the blower.
-         * @returns {BallCount[]}
-         */
-        get balls() {
-            const counts = [];
-
-            for (const ball of this.#balls) {
-                const colour = ball.render.fillStyle;
-                const entry = counts.find(count => count.colour === colour);
-
-                if (entry) {
-                    entry.count++;
-                } else {
-                    counts.push({colour: colour, label: colourLabel(colour), count: 1});
-                }
-            }
-
-            return counts;
         }
 
         /**

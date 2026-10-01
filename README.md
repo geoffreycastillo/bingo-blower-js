@@ -13,9 +13,9 @@ https://geoffreycastillo.com/bingo-blower-js-demo/
 Include both, for example from [jsDelivr](https://www.jsdelivr.com/):
 ```html
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v1.1.0/bingo-blower.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v1.2.0/bingo-blower.min.js"></script>
 ```
-Always pin the version (`@v1.1.0` above), so that a new release cannot change your experiment while it is running.
+Always pin the version (`@v1.2.0` above), so that a new release cannot change your experiment while it is running.
 You can also download `bingo-blower.js` from the [releases](https://github.com/geoffreycastillo/bingo-blower-js/releases) and host it yourself.
 
 ## Quick start
@@ -25,7 +25,7 @@ You can also download `bingo-blower.js` from the [releases](https://github.com/g
 The ball drawn is: <span id="result"></span>
 
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v1.1.0/bingo-blower.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v1.2.0/bingo-blower.min.js"></script>
 <script>
     const blower = new BingoBlower();
     blower.addBalls([1, 2, 3]);
@@ -89,10 +89,6 @@ Adds balls to the blower.
 
 Removes balls from the blower. Same arguments as `addBalls()`.
 
-### `blower.balls`
-
-Number of balls of each colour currently in the blower, e.g. `[{colour: 'MediumBlue', label: 'blue', count: 2}]`.
-
 ### `blower.drawBall()`
 
 Shows the target, lets the balls tumble for `timeSeconds`, stops them, then highlights the ball closest to the target.
@@ -114,6 +110,12 @@ Mouse control is off by default.
 
 Stops the simulation, so that a new bingo-blower can be created on the same canvas. Cancels a draw in progress.
 
+## Changes in v1.2
+
+- `blower.balls` is removed, so that subjects cannot read the number of balls from the browser console.
+  If you need the number of balls, keep track of it in your own code.
+  See the [wiki](https://github.com/geoffreycastillo/bingo-blower-js/wiki) for how to make the number of balls harder to find.
+
 ## Changes in v1.1
 
 - No longer needs the `matter-attractors` plugin: the wind is built in. The simulation is unchanged.
@@ -132,7 +134,7 @@ Stops the simulation, so that a new bingo-blower can be created on the same canv
 
 `bingo-blower.js` needs a browser from 2021 or later (Chrome 84, Firefox 90, Safari 15).
 On devices too slow to keep up, the balls will move slower.
-The [wiki](https://github.com/geoffreycastillo/bingo-blower-js/wiki/Using-bingo-blower.js-in-an-experiment) explains how to record participants' browser and frame rate.
+The [wiki](https://github.com/geoffreycastillo/bingo-blower-js/wiki) explains how to record participants' browser and frame rate.
 
 ## Citation
 
