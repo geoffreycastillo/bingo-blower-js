@@ -2,8 +2,8 @@
     const DEFAULT_OPTIONS = {
         el: 'world',
         width: 500,
-        wallWidth: 60,
-        ballSize: 10,
+        wallWidth: 0.12,
+        ballSize: 0.02,
         density: 0.004,
         friction: 0.02,
         frictionAir: 0.001,
@@ -11,17 +11,28 @@
         restitution: 0.7,
         windForce: 9e-4,
         targetColour: 'LightGray',
-        targetWidth: 50,
-        targetThickness: 10,
+        targetWidth: 0.1,
+        targetThickness: 0.02,
         drawnBallHighlight: 'Black',
-        drawnBallThickness: 10,
+        drawnBallThickness: 0.5,
         timeSeconds: 3,
         revealSeconds: 0,
         frostedEdges: false,
-        edgeBlur: 60,
-        edgeBand: 110,
+        edgeBlur: 0.12,
+        edgeBand: 0.44,
         edgeFrost: 0.8,
     };
+
+    const FRACTION_OPTIONS = [
+        'wallWidth',
+        'ballSize',
+        'targetWidth',
+        'targetThickness',
+        'drawnBallThickness',
+        'edgeBlur',
+        'edgeBand',
+        'edgeFrost',
+    ];
 
     const DEFAULT_COLOURS = ['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna'];
 
@@ -38,7 +49,9 @@
 
     const WALL_COLOUR = 'LightGray';
     const BACKGROUND_COLOUR = 'White';
-    const EDGE_FEATHER = 55;
+    const WORLD_SIZE = 500;
+    const EDGE_FEATHER = 0.11;
+    const REVEAL_BLUR = 0.2;
     const BOTTOM_WALL_ANGLE = 0.361799;
     const MAX_SPEED = 20;
     const HIGHLIGHT_DELAY_MS = 1000;
@@ -55,6 +68,15 @@
     function colourLabel(colour) {
         const name = Object.keys(LABELS).find(name => colour.endsWith(name));
         return name ? LABELS[name] : colour.toLowerCase();
+    }
+
+    function checkFractions(options) {
+        for (const name of FRACTION_OPTIONS) {
+            const value = options[name];
+            if (!(value >= 0 && value <= 1)) {
+                throw new Error(`BingoBlower: ${name} is ${value} but must be a fraction between 0 and 1`);
+            }
+        }
     }
 
     function parseCounts(ballList, colours) {
@@ -96,9 +118,9 @@
         /**
          * @param {Object} [options]
          * @param {string} [options.el='world'] - Id of the canvas where the bingo-blower is drawn
-         * @param {number} [options.width=500] - Width and height of the bingo-blower, which is a square
-         * @param {number} [options.wallWidth=60] - Width of the walls
-         * @param {number} [options.ballSize=10] - Radius of the balls
+         * @param {number} [options.width=500] - Width and height of the bingo-blower in pixels, which is a square
+         * @param {number} [options.wallWidth=0.12] - Width of the walls, as a fraction of the blower's width
+         * @param {number} [options.ballSize=0.02] - Radius of the balls, as a fraction of the blower's width
          * @param {number} [options.density=0.004] - Density of the balls
          * @param {number} [options.friction=0.02] - Friction of the balls
          * @param {number} [options.frictionAir=0.001] - Air resistance of the balls
@@ -106,19 +128,23 @@
          * @param {number} [options.restitution=0.7] - Bounciness of the balls
          * @param {number} [options.windForce=9e-4] - How strong the air blows at the bottom of the blower
          * @param {string} [options.targetColour='LightGray'] - Colour of the target
-         * @param {number} [options.targetWidth=50] - Width of the target
-         * @param {number} [options.targetThickness=10] - Thickness of the target
+         * @param {number} [options.targetWidth=0.1] - Width of the target, as a fraction of the blower's width
+         * @param {number} [options.targetThickness=0.02] - Thickness of the target, as a fraction of the blower's width
          * @param {string} [options.drawnBallHighlight='Black'] - Colour of the circle around the ball drawn
-         * @param {number} [options.drawnBallThickness=10] - Thickness of the circle around the ball drawn
+         * @param {number} [options.drawnBallThickness=0.5] - Thickness of the circle around the ball drawn, as a fraction of
+         * the ball's diameter: 1 covers the whole ball
          * @param {number} [options.timeSeconds=3] - How long the balls keep tumbling after the target appears
          * @param {number} [options.revealSeconds=0] - How long the blower takes to go from blurry to sharp (0 for no blur)
          * @param {boolean} [options.frostedEdges=false] - Whether the edges of the blower are frosted, so that the balls there cannot be counted
-         * @param {number} [options.edgeBlur=60] - How much the frosted edges are blurred: roughly the size, in pixels, of the area each blurred pixel averages over
-         * @param {number} [options.edgeBand=110] - How far the frosted edges reach into the blower, in pixels
+         * @param {number} [options.edgeBlur=0.12] - How much the frosted edges are blurred: roughly the size of the area
+         * each blurred pixel averages over, as a fraction of the blower's width
+         * @param {number} [options.edgeBand=0.44] - How much of the blower's width is frosted, split equally between both
+         * sides: 0.5 frosts a quarter from each side, 1 frosts everything
          * @param {number} [options.edgeFrost=0.8] - How much the frosted edges are washed out to white, from 0 (not at all) to 1 (completely)
          */
         constructor(options = {}) {
             this.#options = {...DEFAULT_OPTIONS, ...options};
+            checkFractions(this.#options);
             const {el, width, revealSeconds} = this.#options;
 
             const canvas = document.getElementById(el);
@@ -132,6 +158,10 @@
             this.#render = Matter.Render.create({
                 canvas: canvas,
                 engine: this.#engine,
+                bounds: {
+                    min: {x: 0, y: 0},
+                    max: {x: WORLD_SIZE, y: WORLD_SIZE},
+                },
                 options: {
                     width: width,
                     height: width,
@@ -154,6 +184,7 @@
             ]);
 
             this.#mouse = Matter.Mouse.create(canvas);
+            Matter.Mouse.setScale(this.#mouse, {x: WORLD_SIZE / width, y: WORLD_SIZE / width});
             canvas.removeEventListener('mousemove', this.#mouse.mousemove);
             canvas.removeEventListener('mousedown', this.#mouse.mousedown);
             canvas.removeEventListener('mouseup', this.#mouse.mouseup);
@@ -184,7 +215,8 @@
             }
 
             if (revealSeconds > 0) {
-                canvas.animate([{filter: 'blur(100px)'}, {filter: 'blur(0px)'}], revealSeconds * 1000);
+                const blur = REVEAL_BLUR * width;
+                canvas.animate([{filter: `blur(${blur}px)`}, {filter: 'blur(0px)'}], revealSeconds * 1000);
             }
         }
 
@@ -254,7 +286,7 @@
             }
 
             ball.render.strokeStyle = this.#options.drawnBallHighlight;
-            ball.render.lineWidth = this.#options.drawnBallThickness;
+            ball.render.lineWidth = this.#options.drawnBallThickness * 2 * ball.circleRadius;
             this.#drawnBall = ball;
 
             return {
@@ -372,11 +404,11 @@
         };
 
         #keepInsideBlower(position) {
-            const {width, wallWidth, ballSize} = this.#options;
-            const margin = wallWidth / 2 + ballSize;
+            const {wallWidth, ballSize} = this.#options;
+            const margin = (wallWidth / 2 + ballSize) * WORLD_SIZE;
 
-            position.x = Math.min(Math.max(position.x, margin), width - margin);
-            position.y = Math.min(Math.max(position.y, margin), width - margin);
+            position.x = Math.min(Math.max(position.x, margin), WORLD_SIZE - margin);
+            position.y = Math.min(Math.max(position.y, margin), WORLD_SIZE - margin);
         }
 
         #freeze() {
@@ -424,7 +456,9 @@
                 if (this.#drawnBall) {
                     sharpBodies.push(this.#drawnBall);
                 }
+                Matter.Render.startViewTransform(this.#render);
                 Matter.Render.bodies(this.#render, sharpBodies, context);
+                Matter.Render.endViewTransform(this.#render);
             });
         }
 
@@ -432,7 +466,8 @@
             const {width, edgeBand} = this.#options;
             const mask = this.#createCanvas(width);
             const context = mask.getContext('2d');
-            const span = edgeBand + EDGE_FEATHER;
+            const band = edgeBand / 2 * width;
+            const span = band + EDGE_FEATHER * width;
             const gradients = [
                 context.createLinearGradient(0, 0, 0, span),
                 context.createLinearGradient(0, width, 0, width - span),
@@ -443,7 +478,7 @@
             context.globalCompositeOperation = 'lighter';
             for (const gradient of gradients) {
                 gradient.addColorStop(0, 'black');
-                gradient.addColorStop(edgeBand / span, 'black');
+                gradient.addColorStop(band / span, 'black');
                 gradient.addColorStop(1, 'transparent');
                 context.fillStyle = gradient;
                 context.fillRect(0, 0, width, width);
@@ -459,7 +494,7 @@
                 return steps;
             }
 
-            const smallestSize = Math.max(2, Math.round(width / edgeBlur));
+            const smallestSize = Math.max(2, Math.round(1 / edgeBlur));
             let size = width;
             while (size > smallestSize) {
                 size = Math.max(smallestSize, Math.round(size / 2));
@@ -483,7 +518,7 @@
         }
 
         #createWalls() {
-            const {width, wallWidth} = this.#options;
+            const wallWidth = this.#options.wallWidth * WORLD_SIZE;
             const wallOptions = {
                 isStatic: true,
                 render: {
@@ -492,18 +527,23 @@
             };
 
             return [
-                Matter.Bodies.rectangle(width / 2, 0, width, wallWidth, wallOptions),
-                Matter.Bodies.rectangle(0, width / 2, wallWidth, width, wallOptions),
-                Matter.Bodies.rectangle(width, width / 2, wallWidth, width, wallOptions),
-                Matter.Bodies.polygon(0, 1.4 * width, 3, -width, {...wallOptions, angle: -BOTTOM_WALL_ANGLE}),
-                Matter.Bodies.polygon(width, 1.4 * width, 3, width, {...wallOptions, angle: BOTTOM_WALL_ANGLE}),
+                Matter.Bodies.rectangle(WORLD_SIZE / 2, 0, WORLD_SIZE, wallWidth, wallOptions),
+                Matter.Bodies.rectangle(0, WORLD_SIZE / 2, wallWidth, WORLD_SIZE, wallOptions),
+                Matter.Bodies.rectangle(WORLD_SIZE, WORLD_SIZE / 2, wallWidth, WORLD_SIZE, wallOptions),
+                Matter.Bodies.polygon(0, 1.4 * WORLD_SIZE, 3, -WORLD_SIZE, {
+                    ...wallOptions,
+                    angle: -BOTTOM_WALL_ANGLE,
+                }),
+                Matter.Bodies.polygon(WORLD_SIZE, 1.4 * WORLD_SIZE, 3, WORLD_SIZE, {
+                    ...wallOptions,
+                    angle: BOTTOM_WALL_ANGLE,
+                }),
             ];
         }
 
         #createWindSource() {
-            const {width} = this.#options;
 
-            return Matter.Bodies.circle(width / 2, width, 0.1 * width, {
+            return Matter.Bodies.circle(WORLD_SIZE / 2, WORLD_SIZE, 0.1 * WORLD_SIZE, {
                 isStatic: true,
                 render: {
                     fillStyle: WALL_COLOUR,
@@ -512,7 +552,9 @@
         }
 
         #createTarget() {
-            const {width, targetColour, targetWidth, targetThickness} = this.#options;
+            const targetColour = this.#options.targetColour;
+            const targetWidth = this.#options.targetWidth * WORLD_SIZE;
+            const targetThickness = this.#options.targetThickness * WORLD_SIZE;
             const barOptions = {
                 render: {
                     fillStyle: targetColour,
@@ -521,8 +563,8 @@
 
             return Matter.Body.create({
                 parts: [
-                    Matter.Bodies.rectangle(width / 2, width / 2, targetWidth, targetThickness, barOptions),
-                    Matter.Bodies.rectangle(width / 2, width / 2, targetThickness, targetWidth, barOptions),
+                    Matter.Bodies.rectangle(WORLD_SIZE / 2, WORLD_SIZE / 2, targetWidth, targetThickness, barOptions),
+                    Matter.Bodies.rectangle(WORLD_SIZE / 2, WORLD_SIZE / 2, targetThickness, targetWidth, barOptions),
                 ],
                 isStatic: true,
                 collisionFilter: {
@@ -535,11 +577,13 @@
         }
 
         #createBall(colour) {
-            const {width, wallWidth, ballSize, density, friction, frictionAir, frictionStatic, restitution} = this.#options;
+            const {density, friction, frictionAir, frictionStatic, restitution} = this.#options;
+            const wallWidth = this.#options.wallWidth * WORLD_SIZE;
+            const ballSize = this.#options.ballSize * WORLD_SIZE;
 
             return Matter.Bodies.circle(
-                randomBetween(wallWidth + 10, width - wallWidth - 10),
-                randomBetween(0.8 * width, 0.9 * width),
+                randomBetween(wallWidth + 10, WORLD_SIZE - wallWidth - 10),
+                randomBetween(0.8 * WORLD_SIZE, 0.9 * WORLD_SIZE),
                 ballSize,
                 {
                     density: density,
@@ -573,7 +617,7 @@
         }
 
         #applyWind() {
-            const {width, windForce} = this.#options;
+            const windForce = this.#options.windForce;
             const force = windForce * FORCE_SCALE;
             const windSource = this.#windSource.position;
             const windRadius = this.#windSource.circleRadius;
@@ -583,7 +627,7 @@
                 const distanceY = windSource.y - ball.position.y;
 
                 if (distanceX < 2 * windRadius) {
-                    Matter.Body.applyForce(ball, ball.position, {x: 0, y: -force * width / distanceY});
+                    Matter.Body.applyForce(ball, ball.position, {x: 0, y: -force * WORLD_SIZE / distanceY});
                 }
             }
         }

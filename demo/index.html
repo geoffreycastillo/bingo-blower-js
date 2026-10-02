@@ -56,8 +56,8 @@
 <h2>Options</h2>
 <form id="options">
     <p><label>width <input type="number" step="any" name="width" value="500"></label></p>
-    <p><label>wallWidth <input type="number" step="any" name="wallWidth" value="60"></label></p>
-    <p><label>ballSize <input type="number" step="any" name="ballSize" value="10"></label></p>
+    <p><label>wallWidth <input type="number" step="any" min="0" max="1" name="wallWidth" value="0.12"></label></p>
+    <p><label>ballSize <input type="number" step="any" min="0" max="1" name="ballSize" value="0.02"></label></p>
     <p><label>density <input type="number" step="any" name="density" value="0.004"></label></p>
     <p><label>friction <input type="number" step="any" name="friction" value="0.02"></label></p>
     <p><label>frictionAir <input type="number" step="any" name="frictionAir" value="0.001"></label></p>
@@ -65,16 +65,16 @@
     <p><label>restitution <input type="number" step="any" name="restitution" value="0.7"></label></p>
     <p><label>windForce <input type="number" step="any" name="windForce" value="0.0009"></label></p>
     <p><label>targetColour <input type="text" name="targetColour" value="LightGray"></label></p>
-    <p><label>targetWidth <input type="number" step="any" name="targetWidth" value="50"></label></p>
-    <p><label>targetThickness <input type="number" step="any" name="targetThickness" value="10"></label></p>
+    <p><label>targetWidth <input type="number" step="any" min="0" max="1" name="targetWidth" value="0.1"></label></p>
+    <p><label>targetThickness <input type="number" step="any" min="0" max="1" name="targetThickness" value="0.02"></label></p>
     <p><label>drawnBallHighlight <input type="text" name="drawnBallHighlight" value="Black"></label></p>
-    <p><label>drawnBallThickness <input type="number" step="any" name="drawnBallThickness" value="10"></label></p>
+    <p><label>drawnBallThickness <input type="number" step="any" min="0" max="1" name="drawnBallThickness" value="0.5"></label></p>
     <p><label>timeSeconds <input type="number" step="any" name="timeSeconds" value="3"></label></p>
     <p><label>revealSeconds <input type="number" step="any" name="revealSeconds" value="0"></label></p>
     <p><label>frostedEdges <input type="checkbox" name="frostedEdges"></label></p>
-    <p><label>edgeBlur <input type="number" step="any" name="edgeBlur" value="60"></label></p>
-    <p><label>edgeBand <input type="number" step="any" name="edgeBand" value="110"></label></p>
-    <p><label>edgeFrost <input type="number" step="any" name="edgeFrost" value="0.8"></label></p>
+    <p><label>edgeBlur <input type="number" step="any" min="0" max="1" name="edgeBlur" value="0.12"></label></p>
+    <p><label>edgeBand <input type="number" step="any" min="0" max="1" name="edgeBand" value="0.44"></label></p>
+    <p><label>edgeFrost <input type="number" step="any" min="0" max="1" name="edgeFrost" value="0.8"></label></p>
     <button type="submit">Rebuild the blower</button>
 </form>
 

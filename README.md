@@ -40,7 +40,9 @@ See the [wiki](https://github.com/geoffreycastillo/bingo-blower-js/wiki) for adv
 
 ## Examples
 
-Create a bingo-blower with bigger balls: `new BingoBlower({ballSize: 30})` (you will also need to increase `windForce` or decrease `density`, because bigger balls are heavier!)
+Create a smaller bingo-blower, for example for phones: `new BingoBlower({width: 300})` (everything shrinks with it, and the balls move the same way)
+
+Create a bingo-blower with bigger balls: `new BingoBlower({ballSize: 0.06})` (you will also need to increase `windForce` or decrease `density`, because bigger balls are heavier!)
 
 Blur the bingo-blower for the first 3 seconds, so that the balls are harder to count: `new BingoBlower({revealSeconds: 3})`
 
@@ -62,9 +64,9 @@ All options are optional.
 | Option | Default | Description |
 | --- | --- | --- |
 | `el` | `'world'` | Id of the canvas where the bingo-blower is drawn |
-| `width` | `500` | Width and height of the bingo-blower, which is a square |
-| `wallWidth` | `60` | Width of the walls |
-| `ballSize` | `10` | Radius of the balls |
+| `width` | `500` | Width and height of the bingo-blower in pixels, which is a square |
+| `wallWidth` | `0.12` | Width of the walls, as a fraction of the bingo-blower's width |
+| `ballSize` | `0.02` | Radius of the balls, as a fraction of the bingo-blower's width |
 | `density` | `0.004` | Density of the balls |
 | `friction` | `0.02` | Friction of the balls |
 | `frictionAir` | `0.001` | Air resistance of the balls |
@@ -72,16 +74,20 @@ All options are optional.
 | `restitution` | `0.7` | Bounciness of the balls |
 | `windForce` | `9e-4` | How strong the air blows at the bottom of the blower |
 | `targetColour` | `'LightGray'` | Colour of the target |
-| `targetWidth` | `50` | Width of the target |
-| `targetThickness` | `10` | Thickness of the target |
+| `targetWidth` | `0.1` | Width of the target, as a fraction of the bingo-blower's width |
+| `targetThickness` | `0.02` | Thickness of the target, as a fraction of the bingo-blower's width |
 | `drawnBallHighlight` | `'Black'` | Colour of the circle around the ball drawn |
-| `drawnBallThickness` | `10` | Thickness of the circle around the ball drawn |
+| `drawnBallThickness` | `0.5` | Thickness of the circle around the ball drawn, as a fraction of the ball's diameter: 1 covers the whole ball |
 | `timeSeconds` | `3` | How long the balls keep tumbling after the target appears |
 | `revealSeconds` | `0` | How long the blower takes to go from blurry to sharp (0 for no blur) |
 | `frostedEdges` | `false` | Whether the edges of the blower are frosted, so that the balls there cannot be counted |
-| `edgeBlur` | `60` | How much the frosted edges are blurred: roughly the size, in pixels, of the area each blurred pixel averages over |
-| `edgeBand` | `110` | How far the frosted edges reach into the blower, in pixels |
+| `edgeBlur` | `0.12` | How much the frosted edges are blurred: roughly the size of the area each blurred pixel averages over, as a fraction of the bingo-blower's width |
+| `edgeBand` | `0.44` | How much of the bingo-blower's width is frosted, split equally between both sides: 0.5 frosts a quarter from each side, 1 frosts everything |
 | `edgeFrost` | `0.8` | How much the frosted edges are washed out to white, from 0 (not at all) to 1 (completely) |
+
+Only `width` is in pixels.
+Everything else scales with it, so a bingo-blower of any width looks and moves like the default one, only bigger or smaller.
+`wallWidth`, `ballSize`, `targetWidth`, `targetThickness`, `drawnBallThickness`, `edgeBlur`, `edgeBand` and `edgeFrost` must be between 0 and 1, or `new BingoBlower()` throws an error.
 
 See the [matter.js documentation](https://brm.io/matter-js/docs/classes/Body.html) for details on `density`, `friction`, `frictionAir`, `frictionStatic` and `restitution`.
 
