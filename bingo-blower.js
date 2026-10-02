@@ -2,7 +2,7 @@
     const DEFAULT_OPTIONS = {
         el: 'world',
         width: 500,
-        wallWidth: 0.12,
+        wallWidth: 0.06,
         ballSize: 0.02,
         density: 0.004,
         friction: 0.02,
@@ -50,6 +50,7 @@
     const WALL_COLOUR = 'LightGray';
     const BACKGROUND_COLOUR = 'White';
     const WORLD_SIZE = 500;
+    const WALL_THICKNESS = WORLD_SIZE;
     const EDGE_FEATHER = 0.11;
     const REVEAL_BLUR = 0.2;
     const BOTTOM_WALL_ANGLE = 0.361799;
@@ -119,7 +120,7 @@
          * @param {Object} [options]
          * @param {string} [options.el='world'] - Id of the canvas where the bingo-blower is drawn
          * @param {number} [options.width=500] - Width and height of the bingo-blower in pixels, which is a square
-         * @param {number} [options.wallWidth=0.12] - Width of the walls, as a fraction of the blower's width
+         * @param {number} [options.wallWidth=0.06] - Width of the walls, as a fraction of the blower's width
          * @param {number} [options.ballSize=0.02] - Radius of the balls, as a fraction of the blower's width
          * @param {number} [options.density=0.004] - Density of the balls
          * @param {number} [options.friction=0.02] - Friction of the balls
@@ -406,7 +407,7 @@
 
         #keepInsideBlower(position) {
             const {wallWidth, ballSize} = this.#options;
-            const margin = (wallWidth / 2 + ballSize) * WORLD_SIZE;
+            const margin = (wallWidth + ballSize) * WORLD_SIZE;
 
             position.x = Math.min(Math.max(position.x, margin), WORLD_SIZE - margin);
             position.y = Math.min(Math.max(position.y, margin), WORLD_SIZE - margin);
@@ -520,6 +521,10 @@
 
         #createWalls() {
             const wallWidth = this.#options.wallWidth * WORLD_SIZE;
+            const wallLength = WORLD_SIZE + 2 * WALL_THICKNESS;
+            const top = wallWidth - WALL_THICKNESS / 2;
+            const left = wallWidth - WALL_THICKNESS / 2;
+            const right = WORLD_SIZE - wallWidth + WALL_THICKNESS / 2;
             const wallOptions = {
                 isStatic: true,
                 render: {
@@ -528,9 +533,9 @@
             };
 
             return [
-                Matter.Bodies.rectangle(WORLD_SIZE / 2, 0, WORLD_SIZE, wallWidth, wallOptions),
-                Matter.Bodies.rectangle(0, WORLD_SIZE / 2, wallWidth, WORLD_SIZE, wallOptions),
-                Matter.Bodies.rectangle(WORLD_SIZE, WORLD_SIZE / 2, wallWidth, WORLD_SIZE, wallOptions),
+                Matter.Bodies.rectangle(WORLD_SIZE / 2, top, wallLength, WALL_THICKNESS, wallOptions),
+                Matter.Bodies.rectangle(left, WORLD_SIZE / 2, WALL_THICKNESS, wallLength, wallOptions),
+                Matter.Bodies.rectangle(right, WORLD_SIZE / 2, WALL_THICKNESS, wallLength, wallOptions),
                 Matter.Bodies.polygon(0, 1.4 * WORLD_SIZE, 3, -WORLD_SIZE, {
                     ...wallOptions,
                     angle: -BOTTOM_WALL_ANGLE,
@@ -583,7 +588,7 @@
             const ballSize = this.#options.ballSize * WORLD_SIZE;
 
             return Matter.Bodies.circle(
-                randomBetween(wallWidth + 10, WORLD_SIZE - wallWidth - 10),
+                randomBetween(2 * wallWidth + 10, WORLD_SIZE - 2 * wallWidth - 10),
                 randomBetween(0.8 * WORLD_SIZE, 0.9 * WORLD_SIZE),
                 ballSize,
                 {

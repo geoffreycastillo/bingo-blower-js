@@ -67,7 +67,7 @@ All options are optional.
 | --- | --- | --- |
 | `el` | `'world'` | Id of the canvas where the bingo-blower is drawn |
 | `width` | `500` | Width and height of the bingo-blower in pixels, which is a square |
-| `wallWidth` | `0.12` | Width of the walls, as a fraction of the bingo-blower's width |
+| `wallWidth` | `0.06` | Width of the walls, as a fraction of the bingo-blower's width |
 | `ballSize` | `0.02` | Radius of the balls, as a fraction of the bingo-blower's width |
 | `density` | `0.004` | Density of the balls |
 | `friction` | `0.02` | Friction of the balls |
