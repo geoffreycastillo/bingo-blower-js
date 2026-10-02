@@ -154,7 +154,13 @@
             ]);
 
             this.#mouse = Matter.Mouse.create(canvas);
+            canvas.removeEventListener('mousemove', this.#mouse.mousemove);
+            canvas.removeEventListener('mousedown', this.#mouse.mousedown);
+            canvas.removeEventListener('mouseup', this.#mouse.mouseup);
             canvas.removeEventListener('wheel', this.#mouse.mousewheel);
+            canvas.removeEventListener('touchmove', this.#mouse.mousemove);
+            canvas.removeEventListener('touchstart', this.#mouse.mousedown);
+            canvas.removeEventListener('touchend', this.#mouse.mouseup);
             this.#mouseConstraint = Matter.MouseConstraint.create(this.#engine, {
                 mouse: this.#mouse,
                 constraint: {
@@ -305,11 +311,6 @@
             this.#drawId++;
             this.removeMouseControl();
 
-            const element = this.#mouse.element;
-            element.removeEventListener('mousemove', this.#mouse.mousemove);
-            element.removeEventListener('mousedown', this.#mouse.mousedown);
-            element.removeEventListener('mouseup', this.#mouse.mouseup);
-
             Matter.Render.stop(this.#render);
             Matter.Runner.stop(this.#runner);
             Matter.Events.off(this.#engine);
@@ -324,20 +325,58 @@
             Matter.Composite.add(this.#engine.world, this.#mouseConstraint);
 
             const element = this.#mouse.element;
-            element.addEventListener('touchmove', this.#mouse.mousemove);
-            element.addEventListener('touchstart', this.#mouse.mousedown);
-            element.addEventListener('touchend', this.#mouse.mouseup);
+            element.style.touchAction = 'none';
+            element.addEventListener('pointermove', this.#pointerMove);
+            element.addEventListener('pointerdown', this.#pointerDown);
+            element.addEventListener('pointerup', this.#pointerUp);
+            element.addEventListener('pointercancel', this.#pointerUp);
         }
 
         #disableMouse() {
             const element = this.#mouse.element;
-            element.removeEventListener('touchmove', this.#mouse.mousemove);
-            element.removeEventListener('touchstart', this.#mouse.mousedown);
-            element.removeEventListener('touchend', this.#mouse.mouseup);
+            element.style.touchAction = '';
+            element.removeEventListener('pointermove', this.#pointerMove);
+            element.removeEventListener('pointerdown', this.#pointerDown);
+            element.removeEventListener('pointerup', this.#pointerUp);
+            element.removeEventListener('pointercancel', this.#pointerUp);
 
             Matter.Composite.remove(this.#engine.world, this.#mouseConstraint);
             this.#mouse.button = -1;
             this.#mouseConstraint.constraint.bodyB = null;
+        }
+
+        #pointerMove = event => {
+            if (!event.isPrimary) {
+                return;
+            }
+
+            this.#mouse.mousemove(event);
+            this.#keepInsideBlower(this.#mouse.position);
+        };
+
+        #pointerDown = event => {
+            if (!event.isPrimary) {
+                return;
+            }
+
+            this.#mouse.mousedown(event);
+            this.#mouse.element.setPointerCapture(event.pointerId);
+        };
+
+        #pointerUp = event => {
+            if (!event.isPrimary) {
+                return;
+            }
+
+            this.#mouse.mouseup(event);
+        };
+
+        #keepInsideBlower(position) {
+            const {width, wallWidth, ballSize} = this.#options;
+            const margin = wallWidth / 2 + ballSize;
+
+            position.x = Math.min(Math.max(position.x, margin), width - margin);
+            position.y = Math.min(Math.max(position.y, margin), width - margin);
         }
 
         #freeze() {
