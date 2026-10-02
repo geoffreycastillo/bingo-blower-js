@@ -13,9 +13,9 @@ https://geoffreycastillo.com/bingo-blower-js-demo/
 Include both, for example from [jsDelivr](https://www.jsdelivr.com/):
 ```html
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v2.0.0/bingo-blower.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v3.0.0/bingo-blower.min.js"></script>
 ```
-Always pin the version (`@v2.0.0` above), so that a new release cannot change your experiment while it is running.
+Always pin the version (`@v3.0.0` above), so that a new release cannot change your experiment while it is running.
 You can also download `bingo-blower.js` from the [releases](https://github.com/geoffreycastillo/bingo-blower-js/releases) and host it yourself.
 
 ## Quick start
@@ -25,7 +25,7 @@ You can also download `bingo-blower.js` from the [releases](https://github.com/g
 The ball drawn is: <span id="result"></span>
 
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v2.0.0/bingo-blower.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/geoffreycastillo/bingo-blower-js@v3.0.0/bingo-blower.min.js"></script>
 <script>
     const blower = new BingoBlower();
     blower.addBalls([1, 2, 3]);
