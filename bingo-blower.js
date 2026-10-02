@@ -260,7 +260,8 @@
         /**
          * Shows the target, lets the balls tumble for `timeSeconds`, stops them, then highlights the ball closest to the
          * target.
-         * @returns {Promise<?Draw>} The ball drawn, or null if `reset()` or `destroy()` was called during the draw
+         * @returns {Promise<?Draw>} The ball drawn, or null if `reset()`, `destroy()` or another `drawBall()` was called
+         * during the draw
          */
         async drawBall() {
             if (this.#balls.length === 0) {

@@ -89,7 +89,9 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
 &lt;script&gt;
     const blower = new BingoBlower();
     blower.addBalls([18, 6, 3]);
-    document.getElementById('draw').addEventListener('click', async () =&gt; {
+    const button = document.getElementById('draw');
+    button.addEventListener('click', async () =&gt; {
+        button.disabled = true;
         const draw = await blower.drawBall();
         document.getElementById('result').textContent = draw.label;
     });
@@ -130,6 +132,7 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
         blower = new BingoBlower(readOptions());
         addAllBalls();
         document.getElementById('result').textContent = '';
+        document.getElementById('draw').disabled = false;
     }
 
     const counts = {
@@ -145,6 +148,7 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
     showCounts();
 
     document.getElementById('draw').addEventListener('click', async () => {
+        document.getElementById('draw').disabled = true;
         const draw = await blower.drawBall();
         if (draw) {
             document.getElementById('result').textContent = draw.label;
@@ -154,6 +158,7 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
     document.getElementById('reset').addEventListener('click', () => {
         blower.reset();
         document.getElementById('result').textContent = '';
+        document.getElementById('draw').disabled = false;
     });
 
     document.getElementById('mouse-on').addEventListener('click', () => blower.addMouseControl());

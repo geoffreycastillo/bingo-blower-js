@@ -29,7 +29,9 @@ The ball drawn is: <span id="result"></span>
 <script>
     const blower = new BingoBlower();
     blower.addBalls([1, 2, 3]);
-    document.getElementById('draw').addEventListener('click', async () => {
+    const button = document.getElementById('draw');
+    button.addEventListener('click', async () => {
+        button.disabled = true;
         const draw = await blower.drawBall();
         document.getElementById('result').textContent = draw.label;
     });
@@ -108,7 +110,7 @@ Removes balls from the blower. Same arguments as `addBalls()`.
 ### `blower.drawBall()`
 
 Shows the target, lets the balls tumble for `timeSeconds`, stops them, then highlights the ball closest to the target.
-Returns a promise of the ball drawn, e.g. `{colour: 'MediumBlue', label: 'blue'}`, or of `null` if `reset()` or `destroy()` was called during the draw.
+Returns a promise of the ball drawn, e.g. `{colour: 'MediumBlue', label: 'blue'}`, or of `null` if `reset()`, `destroy()` or another `drawBall()` was called during the draw.
 
 The `label` is a human-readable colour: CSS colours ending in Red, Blue, Green, Yellow, Pink or Violet become that colour (e.g. 'MediumBlue' becomes 'blue'), 'Gold' becomes 'yellow' and 'Sienna' becomes 'brown'.
 Any other colour is simply lowercased.
