@@ -50,6 +50,8 @@ Blur the bingo-blower for the first 3 seconds, so that the balls are harder to c
 
 Frost the edges of the bingo-blower, so that the balls there cannot be counted, even from a screenshot: `new BingoBlower({frostedEdges: true})`
 
+Frost or unfrost the edges while the bingo-blower is running: `blower.addFrostedEdges()` and `blower.removeFrostedEdges()`
+
 Add a lot of balls: `blower.addBalls([10, 15, 20, 25])`
 
 Same number of balls but base64-encoded: `blower.addBalls('WzEwLDE1LDIwLDI1XQ==')`
@@ -82,7 +84,7 @@ All options are optional.
 | `drawnBallThickness` | `0.5` | Thickness of the circle around the ball drawn, as a fraction of the ball's diameter: 1 covers the whole ball |
 | `timeSeconds` | `3` | How long the balls keep tumbling after the target appears |
 | `revealSeconds` | `0` | How long the blower takes to go from blurry to sharp (0 for no blur) |
-| `frostedEdges` | `false` | Whether the edges of the blower are frosted, so that the balls there cannot be counted |
+| `frostedEdges` | `false` | Whether the edges of the blower start frosted, so that the balls there cannot be counted |
 | `edgeBlur` | `0.12` | How much the frosted edges are blurred: roughly the size of the area each blurred pixel averages over, as a fraction of the bingo-blower's width |
 | `edgeBand` | `0.44` | How much of the bingo-blower's width is frosted, split equally between both sides: 0.5 frosts a quarter from each side, 1 frosts everything |
 | `edgeFrost` | `0.8` | How much the frosted edges are washed out to white, from 0 (not at all) to 1 (completely) |
@@ -93,7 +95,7 @@ Everything else scales with it, so a bingo-blower of any width looks and moves l
 
 See the [matter.js documentation](https://brm.io/matter-js/docs/classes/Body.html) for details on `density`, `friction`, `frictionAir`, `frictionStatic` and `restitution`.
 
-`edgeBlur`, `edgeBand` and `edgeFrost` are only used when `frostedEdges` is `true`.
+`edgeBlur`, `edgeBand` and `edgeFrost` are only used when the edges are frosted.
 Their defaults are the recommended setting: change them only if you want to fine-tune the frosted edges.
 The walls, the target and the ball drawn are never frosted.
 
@@ -127,6 +129,12 @@ Mouse control is off by default.
 Mouse control is locked from the start of `drawBall()` until `reset()`, so that the user cannot steer a ball onto the target.
 `reset()` turns it back on if it was on before the draw.
 Calling `addMouseControl()` while it is locked does nothing.
+
+### `blower.addFrostedEdges()` and `blower.removeFrostedEdges()`
+
+Frosts the edges of the blower, or removes the frosting, while it is running.
+The `frostedEdges` option only sets whether the edges start frosted.
+The frosting uses `edgeBlur`, `edgeBand` and `edgeFrost` from `new BingoBlower()`.
 
 ### `blower.destroy()`
 

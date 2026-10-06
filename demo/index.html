@@ -16,6 +16,8 @@
     <button type="button" id="reset">Reset the blower</button>
     <button type="button" id="mouse-on">Mouse control on</button>
     <button type="button" id="mouse-off">Mouse control off</button>
+    <button type="button" id="frost-on">Frosted edges on</button>
+    <button type="button" id="frost-off">Frosted edges off</button>
 </p>
 <p>The ball drawn is: <span id="result"></span></p>
 
@@ -163,6 +165,9 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
 
     document.getElementById('mouse-on').addEventListener('click', () => blower.addMouseControl());
     document.getElementById('mouse-off').addEventListener('click', () => blower.removeMouseControl());
+
+    document.getElementById('frost-on').addEventListener('click', () => blower.addFrostedEdges());
+    document.getElementById('frost-off').addEventListener('click', () => blower.removeFrostedEdges());
 
     for (const button of document.querySelectorAll('.add')) {
         button.addEventListener('click', () => {

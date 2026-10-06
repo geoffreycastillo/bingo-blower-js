@@ -110,6 +110,10 @@
         #mouseConstraint;
         #windSource;
         #walls;
+        #edgeMask;
+        #blurSteps;
+        #frostBand;
+        #frostedEdges;
         #balls = [];
         #drawnBall = null;
         #drawId = 0;
@@ -136,7 +140,8 @@
          * the ball's diameter: 1 covers the whole ball
          * @param {number} [options.timeSeconds=3] - How long the balls keep tumbling after the target appears
          * @param {number} [options.revealSeconds=0] - How long the blower takes to go from blurry to sharp (0 for no blur)
-         * @param {boolean} [options.frostedEdges=false] - Whether the edges of the blower are frosted, so that the balls there cannot be counted
+         * @param {boolean} [options.frostedEdges=false] - Whether the edges of the blower start frosted,
+         * so that the balls there cannot be counted. Use `addFrostedEdges()` and `removeFrostedEdges()` to change it later
          * @param {number} [options.edgeBlur=0.12] - How much the frosted edges are blurred: roughly the size of the area
          * each blurred pixel averages over, as a fraction of the blower's width
          * @param {number} [options.edgeBand=0.44] - How much of the blower's width is frosted, split equally between both
@@ -175,6 +180,11 @@
                 maxUpdates: 3,
             });
 
+            this.#frostedEdges = this.#options.frostedEdges;
+            this.#edgeMask = this.#createEdgeMask();
+            this.#blurSteps = this.#createBlurSteps();
+            this.#frostBand = this.#createCanvas(width);
+
             this.#walls = this.#createWalls();
             this.#windSource = this.#createWindSource();
             this.#target = this.#createTarget();
@@ -211,9 +221,11 @@
             Matter.Render.run(this.#render);
             Matter.Runner.run(this.#runner, this.#engine);
 
-            if (this.#options.frostedEdges) {
-                this.#frostEdges();
-            }
+            Matter.Events.on(this.#render, 'afterRender', () => {
+                if (this.#frostedEdges) {
+                    this.#frostEdges();
+                }
+            });
 
             if (revealSeconds > 0) {
                 const blur = REVEAL_BLUR * width;
@@ -338,6 +350,20 @@
         }
 
         /**
+         * Frosts the edges of the blower, so that the balls there cannot be counted.
+         */
+        addFrostedEdges() {
+            this.#frostedEdges = true;
+        }
+
+        /**
+         * Removes the frosting from the edges of the blower.
+         */
+        removeFrostedEdges() {
+            this.#frostedEdges = false;
+        }
+
+        /**
          * Stops the simulation, so that a new bingo-blower can be created on the same canvas. Cancels a draw in
          * progress.
          */
@@ -423,45 +449,40 @@
 
         #frostEdges() {
             const {width, edgeFrost} = this.#options;
-            const mask = this.#createEdgeMask();
-            const blurSteps = this.#createBlurSteps();
-            const band = this.#createCanvas(width);
-            const bandContext = band.getContext('2d');
+            const bandContext = this.#frostBand.getContext('2d');
             const context = this.#render.context;
 
-            Matter.Events.on(this.#render, 'afterRender', () => {
-                let source = this.#render.canvas;
-                for (const step of blurSteps) {
-                    this.#drawScaled(source, step);
-                    source = step;
-                }
-                for (const step of blurSteps.slice(0, -1).reverse()) {
-                    this.#drawScaled(source, step);
-                    source = step;
-                }
+            let source = this.#render.canvas;
+            for (const step of this.#blurSteps) {
+                this.#drawScaled(source, step);
+                source = step;
+            }
+            for (const step of this.#blurSteps.slice(0, -1).reverse()) {
+                this.#drawScaled(source, step);
+                source = step;
+            }
 
-                bandContext.globalCompositeOperation = 'source-over';
-                bandContext.fillStyle = BACKGROUND_COLOUR;
-                bandContext.fillRect(0, 0, width, width);
-                bandContext.drawImage(source, 0, 0, width, width);
+            bandContext.globalCompositeOperation = 'source-over';
+            bandContext.fillStyle = BACKGROUND_COLOUR;
+            bandContext.fillRect(0, 0, width, width);
+            bandContext.drawImage(source, 0, 0, width, width);
 
-                bandContext.globalAlpha = edgeFrost;
-                bandContext.fillRect(0, 0, width, width);
-                bandContext.globalAlpha = 1;
+            bandContext.globalAlpha = edgeFrost;
+            bandContext.fillRect(0, 0, width, width);
+            bandContext.globalAlpha = 1;
 
-                bandContext.globalCompositeOperation = 'destination-in';
-                bandContext.drawImage(mask, 0, 0);
+            bandContext.globalCompositeOperation = 'destination-in';
+            bandContext.drawImage(this.#edgeMask, 0, 0);
 
-                context.drawImage(band, 0, 0);
+            context.drawImage(this.#frostBand, 0, 0);
 
-                const sharpBodies = [...this.#walls, this.#windSource, this.#target];
-                if (this.#drawnBall) {
-                    sharpBodies.push(this.#drawnBall);
-                }
-                Matter.Render.startViewTransform(this.#render);
-                Matter.Render.bodies(this.#render, sharpBodies, context);
-                Matter.Render.endViewTransform(this.#render);
-            });
+            const sharpBodies = [...this.#walls, this.#windSource, this.#target];
+            if (this.#drawnBall) {
+                sharpBodies.push(this.#drawnBall);
+            }
+            Matter.Render.startViewTransform(this.#render);
+            Matter.Render.bodies(this.#render, sharpBodies, context);
+            Matter.Render.endViewTransform(this.#render);
         }
 
         #createEdgeMask() {
