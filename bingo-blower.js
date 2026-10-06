@@ -20,7 +20,7 @@
         frostedEdges: false,
         edgeBlur: 0.12,
         edgeBand: 0.44,
-        edgeFrost: 0.8,
+        edgeFrost: 0.5,
     };
 
     const FRACTION_OPTIONS = [
@@ -146,7 +146,7 @@
          * each blurred pixel averages over, as a fraction of the blower's width
          * @param {number} [options.edgeBand=0.44] - How much of the blower's width is frosted, split equally between both
          * sides: 0.5 frosts a quarter from each side, 1 frosts everything
-         * @param {number} [options.edgeFrost=0.8] - How much the frosted edges are washed out to white, from 0 (not at all) to 1 (completely)
+         * @param {number} [options.edgeFrost=0.5] - How much the frosted edges are washed out to white, from 0 (not at all) to 1 (completely)
          */
         constructor(options = {}) {
             this.#options = {...DEFAULT_OPTIONS, ...options};

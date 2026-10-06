@@ -87,7 +87,7 @@ All options are optional.
 | `frostedEdges` | `false` | Whether the edges of the blower start frosted, so that the balls there cannot be counted |
 | `edgeBlur` | `0.12` | How much the frosted edges are blurred: roughly the size of the area each blurred pixel averages over, as a fraction of the bingo-blower's width |
 | `edgeBand` | `0.44` | How much of the bingo-blower's width is frosted, split equally between both sides: 0.5 frosts a quarter from each side, 1 frosts everything |
-| `edgeFrost` | `0.8` | How much the frosted edges are washed out to white, from 0 (not at all) to 1 (completely) |
+| `edgeFrost` | `0.5` | How much the frosted edges are washed out to white, from 0 (not at all) to 1 (completely) |
 
 Only `width` is in pixels.
 Everything else scales with it, so a bingo-blower of any width looks and moves like the default one, only bigger or smaller.
