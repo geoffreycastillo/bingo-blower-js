@@ -4,6 +4,7 @@
         width: 500,
         wallWidth: 0.06,
         ballSize: 0.02,
+        numberedBallSize: 0.03,
         density: 0.004,
         friction: 0.02,
         frictionAir: 0.001,
@@ -14,7 +15,7 @@
         targetWidth: 0.1,
         targetThickness: 0.02,
         drawnBallHighlight: 'Black',
-        drawnBallThickness: 0.5,
+        drawnBallThickness: 0.25,
         timeSeconds: 3,
         revealSeconds: 0,
         frostedEdges: false,
@@ -26,6 +27,7 @@
     const FRACTION_OPTIONS = [
         'wallWidth',
         'ballSize',
+        'numberedBallSize',
         'targetWidth',
         'targetThickness',
         'drawnBallThickness',
@@ -47,6 +49,14 @@
         Sienna: 'brown',
     };
 
+    const UPSIDE_DOWN_DIGITS = {
+        0: '0',
+        1: '1',
+        6: '9',
+        8: '8',
+        9: '6',
+    };
+
     const WALL_COLOUR = 'LightGray';
     const BACKGROUND_COLOUR = 'White';
     const WORLD_SIZE = 500;
@@ -57,6 +67,14 @@
     const MAX_SPEED = 20;
     const HIGHLIGHT_DELAY_MS = 1000;
     const FORCE_SCALE = (15 / (1000 / 60)) ** 2;
+    const TEXTURE_SCALE = 2;
+    const NUMBER_DISC = 0.7;
+    const NUMBER_DISC_COLOUR = 'White';
+    const NUMBER_COLOUR = 'Black';
+    const NUMBER_FONT_SIZE = 1.2;
+    const NUMBER_MAX_WIDTH = 1.5;
+    const UNDERLINE_GAP = 0.1;
+    const UNDERLINE_THICKNESS = 0.1;
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -80,20 +98,56 @@
         }
     }
 
-    function parseCounts(ballList, colours) {
-        const counts = typeof ballList === 'string' ? JSON.parse(atob(ballList)) : ballList;
+    function parseBallList(ballList, colours) {
+        const entries = typeof ballList === 'string' ? JSON.parse(atob(ballList)) : ballList;
 
-        if (counts.length > colours.length) {
-            throw new Error(`BingoBlower: ${counts.length} ball counts but only ${colours.length} colours`);
+        if (entries.length > colours.length) {
+            throw new Error(`BingoBlower: ${entries.length} entries in the ball list but only ${colours.length} colours`);
         }
 
-        return counts;
+        return entries;
+    }
+
+    function isNumbered(entries) {
+        const numbered = entries.some(entry => Array.isArray(entry));
+        const counted = entries.some(entry => !Array.isArray(entry));
+
+        if (numbered && counted) {
+            throw new Error('BingoBlower: the ball list mixes counts and lists of numbers');
+        }
+
+        return numbered;
+    }
+
+    function pickByNumber(balls, numbers) {
+        const remaining = [...balls];
+        const picked = [];
+
+        for (const number of numbers) {
+            const index = remaining.findIndex(ball => ball.plugin.number === number);
+            if (index !== -1) {
+                picked.push(...remaining.splice(index, 1));
+            }
+        }
+
+        return picked;
+    }
+
+    function readsDifferentlyUpsideDown(text) {
+        const digits = [...text].reverse();
+        if (!digits.every(digit => digit in UPSIDE_DOWN_DIGITS)) {
+            return false;
+        }
+
+        const upsideDown = digits.map(digit => UPSIDE_DOWN_DIGITS[digit]).join('');
+        return upsideDown !== text && !upsideDown.startsWith('0');
     }
 
     /**
      * @typedef {Object} Draw
      * @property {string} colour - CSS colour of the ball drawn
      * @property {string} label - Human-readable colour of the ball drawn (e.g. 'MediumBlue' becomes 'blue')
+     * @property {?number} number - Number on the ball drawn, or null if the balls are not numbered
      */
 
     /**
@@ -115,6 +169,7 @@
         #frostBand;
         #frostedEdges;
         #balls = [];
+        #numbered = false;
         #drawnBall = null;
         #drawId = 0;
         #locked = false;
@@ -126,6 +181,8 @@
          * @param {number} [options.width=500] - Width and height of the bingo-blower in pixels, which is a square
          * @param {number} [options.wallWidth=0.06] - Width of the walls, as a fraction of the blower's width
          * @param {number} [options.ballSize=0.02] - Radius of the balls, as a fraction of the blower's width
+         * @param {number} [options.numberedBallSize=0.03] - Radius of the numbered balls, as a fraction of the blower's
+         * width. Their density is lowered so that they weigh the same as balls of size `ballSize`
          * @param {number} [options.density=0.004] - Density of the balls
          * @param {number} [options.friction=0.02] - Friction of the balls
          * @param {number} [options.frictionAir=0.001] - Air resistance of the balls
@@ -135,9 +192,9 @@
          * @param {string} [options.targetColour='LightGray'] - Colour of the target
          * @param {number} [options.targetWidth=0.1] - Width of the target, as a fraction of the blower's width
          * @param {number} [options.targetThickness=0.02] - Thickness of the target, as a fraction of the blower's width
-         * @param {string} [options.drawnBallHighlight='Black'] - Colour of the circle around the ball drawn
-         * @param {number} [options.drawnBallThickness=0.5] - Thickness of the circle around the ball drawn, as a fraction of
-         * the ball's diameter: 1 covers the whole ball
+         * @param {string} [options.drawnBallHighlight='Black'] - Colour of the ring around the ball drawn
+         * @param {number} [options.drawnBallThickness=0.25] - Thickness of the ring around the ball drawn, as a fraction of
+         * the ball's diameter. The ring sits outside the ball
          * @param {number} [options.timeSeconds=3] - How long the balls keep tumbling after the target appears
          * @param {number} [options.revealSeconds=0] - How long the blower takes to go from blurry to sharp (0 for no blur)
          * @param {boolean} [options.frostedEdges=false] - Whether the edges of the blower start frosted,
@@ -225,6 +282,9 @@
                 if (this.#frostedEdges) {
                     this.#frostEdges();
                 }
+                if (this.#drawnBall) {
+                    this.#highlightDrawnBall();
+                }
             });
 
             if (revealSeconds > 0) {
@@ -234,17 +294,39 @@
         }
 
         /**
-         * Adds balls to the blower.
-         * @param {(number[]|string)} ballList - Number of balls of each colour, or its base64-encoded JSON
+         * Numbers from `from` to `to`, both included, e.g. to number balls with `addBalls()`.
+         * @param {number} from - First number
+         * @param {number} to - Last number
+         * @returns {number[]}
+         */
+        static range(from, to) {
+            const numbers = [];
+            for (let number = from; number <= to; number++) {
+                numbers.push(number);
+            }
+            return numbers;
+        }
+
+        /**
+         * Adds balls to the blower. A blower holds either numbered balls or balls that are not numbered, not both.
+         * @param {(Array<number|number[]>|string)} ballList - For each colour, either the number of balls (e.g. `[1, 2, 3]`)
+         * or the numbers on the balls (e.g. `[[1, 2], [1, 2, 3]]`), or its base64-encoded JSON
          * @param {string[]} [colours=['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna']] - CSS colour of each entry
          */
         addBalls(ballList, colours = DEFAULT_COLOURS) {
-            const counts = parseCounts(ballList, colours);
-            const balls = [];
+            const entries = parseBallList(ballList, colours);
+            const numbered = isNumbered(entries);
 
-            counts.forEach((count, i) => {
-                for (let j = 0; j < count; j++) {
-                    balls.push(this.#createBall(colours[i]));
+            if (this.#balls.length > 0 && numbered !== this.#numbered) {
+                throw new Error('BingoBlower: a blower cannot hold both numbered balls and balls that are not numbered');
+            }
+            this.#numbered = numbered;
+
+            const balls = [];
+            entries.forEach((entry, i) => {
+                const numbers = numbered ? entry : Array(entry).fill(null);
+                for (const number of numbers) {
+                    balls.push(this.#createBall(colours[i], number));
                 }
             });
 
@@ -254,16 +336,16 @@
 
         /**
          * Removes balls from the blower.
-         * @param {(number[]|string)} ballList - Number of balls of each colour, or its base64-encoded JSON
+         * @param {(Array<number|number[]>|string)} ballList - For each colour, either the number of balls to remove, or the
+         * numbers on the balls to remove, or its base64-encoded JSON
          * @param {string[]} [colours=['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna']] - CSS colour of each entry
          */
         removeBalls(ballList, colours = DEFAULT_COLOURS) {
-            const counts = parseCounts(ballList, colours);
+            const entries = parseBallList(ballList, colours);
 
-            counts.forEach((count, i) => {
-                const toRemove = this.#balls
-                    .filter(ball => ball.render.fillStyle === colours[i])
-                    .slice(0, count);
+            entries.forEach((entry, i) => {
+                const sameColour = this.#balls.filter(ball => ball.render.fillStyle === colours[i]);
+                const toRemove = Array.isArray(entry) ? pickByNumber(sameColour, entry) : sameColour.slice(0, entry);
 
                 Matter.Composite.remove(this.#engine.world, toRemove);
                 this.#balls = this.#balls.filter(ball => !toRemove.includes(ball));
@@ -299,13 +381,12 @@
                 return null;
             }
 
-            ball.render.strokeStyle = this.#options.drawnBallHighlight;
-            ball.render.lineWidth = this.#options.drawnBallThickness * 2 * ball.circleRadius;
             this.#drawnBall = ball;
 
             return {
                 colour: ball.render.fillStyle,
                 label: colourLabel(ball.render.fillStyle),
+                number: ball.plugin.number,
             };
         }
 
@@ -316,10 +397,7 @@
             this.#drawId++;
             this.#target.render.visible = false;
 
-            if (this.#drawnBall) {
-                this.#drawnBall.render.lineWidth = 0;
-                this.#drawnBall = null;
-            }
+            this.#drawnBall = null;
 
             this.#unfreeze();
 
@@ -432,8 +510,9 @@
         };
 
         #keepInsideBlower(position) {
-            const {wallWidth, ballSize} = this.#options;
-            const margin = (wallWidth + ballSize) * WORLD_SIZE;
+            const {wallWidth, ballSize, numberedBallSize} = this.#options;
+            const size = this.#numbered ? numberedBallSize : ballSize;
+            const margin = (wallWidth + size) * WORLD_SIZE;
 
             position.x = Math.min(Math.max(position.x, margin), WORLD_SIZE - margin);
             position.y = Math.min(Math.max(position.y, margin), WORLD_SIZE - margin);
@@ -482,6 +561,25 @@
             }
             Matter.Render.startViewTransform(this.#render);
             Matter.Render.bodies(this.#render, sharpBodies, context);
+            Matter.Render.endViewTransform(this.#render);
+        }
+
+        #highlightDrawnBall() {
+            const {drawnBallHighlight, drawnBallThickness} = this.#options;
+            const ball = this.#drawnBall;
+            const thickness = drawnBallThickness * 2 * ball.circleRadius;
+            const context = this.#render.context;
+
+            if (thickness <= 0) {
+                return;
+            }
+
+            Matter.Render.startViewTransform(this.#render);
+            context.beginPath();
+            context.arc(ball.position.x, ball.position.y, ball.circleRadius + thickness / 2, 0, 2 * Math.PI);
+            context.lineWidth = thickness;
+            context.strokeStyle = drawnBallHighlight;
+            context.stroke();
             Matter.Render.endViewTransform(this.#render);
         }
 
@@ -603,26 +701,95 @@
             });
         }
 
-        #createBall(colour) {
-            const {density, friction, frictionAir, frictionStatic, restitution} = this.#options;
+        #createBall(colour, number) {
+            const {ballSize, numberedBallSize, friction, frictionAir, frictionStatic, restitution} = this.#options;
             const wallWidth = this.#options.wallWidth * WORLD_SIZE;
-            const ballSize = this.#options.ballSize * WORLD_SIZE;
+            let radius = ballSize * WORLD_SIZE;
+            let density = this.#options.density;
+            const render = {
+                fillStyle: colour,
+            };
+
+            if (number !== null) {
+                radius = numberedBallSize * WORLD_SIZE;
+                density = density * (ballSize / numberedBallSize) ** 2;
+                const texture = this.#numberedTexture(colour, number);
+                const scale = 2 * radius / this.#render.textures[texture].width;
+                render.sprite = {
+                    texture: texture,
+                    xScale: scale,
+                    yScale: scale,
+                };
+            }
 
             return Matter.Bodies.circle(
                 randomBetween(2 * wallWidth + 10, WORLD_SIZE - 2 * wallWidth - 10),
                 randomBetween(0.8 * WORLD_SIZE, 0.9 * WORLD_SIZE),
-                ballSize,
+                radius,
                 {
                     density: density,
                     friction: friction,
                     frictionAir: frictionAir,
                     frictionStatic: frictionStatic,
                     restitution: restitution,
-                    render: {
-                        fillStyle: colour,
+                    render: render,
+                    plugin: {
+                        number: number,
                     },
                 },
             );
+        }
+
+        #numberedTexture(colour, number) {
+            const key = `bingo-blower:${colour}:${number}`;
+            if (!this.#render.textures[key]) {
+                this.#render.textures[key] = this.#drawNumberedBall(colour, number);
+            }
+            return key;
+        }
+
+        #drawNumberedBall(colour, number) {
+            const {width, numberedBallSize} = this.#options;
+            const size = Math.max(1, Math.ceil(2 * numberedBallSize * width * TEXTURE_SCALE));
+            const radius = size / 2;
+            const discRadius = NUMBER_DISC * radius;
+            const text = String(number);
+            const texture = this.#createCanvas(size);
+            const context = texture.getContext('2d');
+
+            context.fillStyle = colour;
+            context.beginPath();
+            context.arc(radius, radius, radius, 0, 2 * Math.PI);
+            context.fill();
+
+            context.fillStyle = NUMBER_DISC_COLOUR;
+            context.beginPath();
+            context.arc(radius, radius, discRadius, 0, 2 * Math.PI);
+            context.fill();
+
+            const maxFontSize = NUMBER_FONT_SIZE * discRadius;
+            context.font = `bold ${maxFontSize}px sans-serif`;
+            const maxWidth = NUMBER_MAX_WIDTH * discRadius;
+            const fontSize = maxFontSize * Math.min(1, maxWidth / context.measureText(text).width);
+            context.font = `bold ${fontSize}px sans-serif`;
+            const metrics = context.measureText(text);
+            const baseline = radius + metrics.actualBoundingBoxAscent / 2;
+
+            context.fillStyle = NUMBER_COLOUR;
+            context.textAlign = 'center';
+            context.textBaseline = 'alphabetic';
+            context.fillText(text, radius, baseline);
+
+            if (readsDifferentlyUpsideDown(text)) {
+                context.fillRect(
+                    radius - metrics.width / 2,
+                    baseline + UNDERLINE_GAP * fontSize,
+                    metrics.width,
+                    UNDERLINE_THICKNESS * fontSize,
+                );
+            }
+
+            return texture;
         }
 
         #closestBallToTarget() {

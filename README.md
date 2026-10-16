@@ -58,6 +58,10 @@ Same number of balls but base64-encoded: `blower.addBalls('WzEwLDE1LDIwLDI1XQ=='
 
 Add balls in your own colours: `blower.addBalls([1, 2, 3], ['MediumVioletRed', 'HotPink', 'Pink'])`
 
+Add numbered balls, red 1 to 10 and blue 1 to 10: `blower.addBalls([BingoBlower.range(1, 10), BingoBlower.range(1, 10)])`
+
+Add numbered balls of a single colour, with repeated numbers: `blower.addBalls([[1, 1, 2, 7]], ['Red'])`
+
 ## API
 
 ### `new BingoBlower(options)`
@@ -71,6 +75,7 @@ All options are optional.
 | `width` | `500` | Width and height of the bingo-blower in pixels, which is a square |
 | `wallWidth` | `0.06` | Width of the walls, as a fraction of the bingo-blower's width |
 | `ballSize` | `0.02` | Radius of the balls, as a fraction of the bingo-blower's width |
+| `numberedBallSize` | `0.03` | Radius of the numbered balls, as a fraction of the bingo-blower's width |
 | `density` | `0.004` | Density of the balls |
 | `friction` | `0.02` | Friction of the balls |
 | `frictionAir` | `0.001` | Air resistance of the balls |
@@ -80,8 +85,8 @@ All options are optional.
 | `targetColour` | `'LightGray'` | Colour of the target |
 | `targetWidth` | `0.1` | Width of the target, as a fraction of the bingo-blower's width |
 | `targetThickness` | `0.02` | Thickness of the target, as a fraction of the bingo-blower's width |
-| `drawnBallHighlight` | `'Black'` | Colour of the circle around the ball drawn |
-| `drawnBallThickness` | `0.5` | Thickness of the circle around the ball drawn, as a fraction of the ball's diameter: 1 covers the whole ball |
+| `drawnBallHighlight` | `'Black'` | Colour of the ring around the ball drawn |
+| `drawnBallThickness` | `0.25` | Thickness of the ring around the ball drawn, as a fraction of the ball's diameter. The ring sits outside the ball |
 | `timeSeconds` | `3` | How long the balls keep tumbling after the target appears |
 | `revealSeconds` | `0` | How long the blower takes to go from blurry to sharp (0 for no blur) |
 | `frostedEdges` | `false` | Whether the edges of the blower start frosted, so that the balls there cannot be counted |
@@ -91,7 +96,7 @@ All options are optional.
 
 Only `width` is in pixels.
 Everything else scales with it, so a bingo-blower of any width looks and moves like the default one, only bigger or smaller.
-`wallWidth`, `ballSize`, `targetWidth`, `targetThickness`, `drawnBallThickness`, `edgeBlur`, `edgeBand` and `edgeFrost` must be between 0 and 1, or `new BingoBlower()` throws an error.
+`wallWidth`, `ballSize`, `numberedBallSize`, `targetWidth`, `targetThickness`, `drawnBallThickness`, `edgeBlur`, `edgeBand` and `edgeFrost` must be between 0 and 1, or `new BingoBlower()` throws an error.
 
 See the [matter.js documentation](https://brm.io/matter-js/docs/classes/Body.html) for details on `density`, `friction`, `frictionAir`, `frictionStatic` and `restitution`.
 
@@ -102,20 +107,42 @@ The walls, the target and the ball drawn are never frosted.
 ### `blower.addBalls(ballList, colours)`
 
 Adds balls to the blower.
-`ballList` is the number of balls of each colour, e.g. `[1, 2, 3]`, or its base64-encoded JSON, e.g. `'WzEsMiwzXQ=='`.
+`ballList` gives, for each colour, either the number of balls or the numbers on the balls:
+
+- `[1, 2, 3]` adds 1 red, 2 blue and 3 yellow balls, without numbers
+- `[[1, 2], [1, 2, 3]]` adds red balls numbered 1 and 2, and blue balls numbered 1, 2 and 3
+
+`ballList` can also be its base64-encoded JSON, e.g. `'WzEsMiwzXQ=='`.
 `colours` is the CSS colour of each entry, and defaults to `['Red', 'MediumBlue', 'Gold', 'LimeGreen', 'Sienna']`.
+
+A blower holds either numbered balls or balls without numbers, not both.
+Adding the other kind throws an error, unless the blower is empty.
+
+Numbered balls look like real bingo balls: the number is on a white disc in the middle of the ball.
+Numbers that read as another number upside down are underlined, e.g. 6 and 9.
+Numbered balls are bigger than the others, so that their numbers are easy to read: their size is `numberedBallSize`, not `ballSize`.
+Their density is lowered so that they weigh the same as balls of size `ballSize`, so that the air lifts them the same way.
+
+### `BingoBlower.range(from, to)`
+
+Returns the numbers from `from` to `to`, both included, e.g. `BingoBlower.range(1, 5)` returns `[1, 2, 3, 4, 5]`.
+Useful to number balls with `addBalls()`.
 
 ### `blower.removeBalls(ballList, colours)`
 
 Removes balls from the blower. Same arguments as `addBalls()`.
+A number of balls removes that many balls of that colour, numbered or not.
+A list of numbers removes the balls of that colour with those numbers.
 
 ### `blower.drawBall()`
 
 Shows the target, lets the balls tumble for `timeSeconds`, stops them, then highlights the ball closest to the target.
-Returns a promise of the ball drawn, e.g. `{colour: 'MediumBlue', label: 'blue'}`, or of `null` if `reset()`, `destroy()` or another `drawBall()` was called during the draw.
+Returns a promise of the ball drawn, e.g. `{colour: 'MediumBlue', label: 'blue', number: 7}`, or of `null` if `reset()`, `destroy()` or another `drawBall()` was called during the draw.
 
 The `label` is a human-readable colour: CSS colours ending in Red, Blue, Green, Yellow, Pink or Violet become that colour (e.g. 'MediumBlue' becomes 'blue'), 'Gold' becomes 'yellow' and 'Sienna' becomes 'brown'.
 Any other colour is simply lowercased.
+
+The `number` is the number on the ball, or `null` if the balls are not numbered.
 
 ### `blower.reset()`
 

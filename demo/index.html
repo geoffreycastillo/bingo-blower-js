@@ -22,6 +22,7 @@
 <p>The ball drawn is: <span id="result"></span></p>
 
 <h2>Balls</h2>
+<p><label><input type="checkbox" id="numbered"> Numbered balls</label></p>
 <table>
     <tr>
         <td>Red</td>
@@ -60,6 +61,7 @@
     <p><label>width <input type="number" step="any" name="width" value="500"></label></p>
     <p><label>wallWidth <input type="number" step="any" min="0" max="1" name="wallWidth" value="0.06"></label></p>
     <p><label>ballSize <input type="number" step="any" min="0" max="1" name="ballSize" value="0.02"></label></p>
+    <p><label>numberedBallSize <input type="number" step="any" min="0" max="1" name="numberedBallSize" value="0.03"></label></p>
     <p><label>density <input type="number" step="any" name="density" value="0.004"></label></p>
     <p><label>friction <input type="number" step="any" name="friction" value="0.02"></label></p>
     <p><label>frictionAir <input type="number" step="any" name="frictionAir" value="0.001"></label></p>
@@ -70,7 +72,7 @@
     <p><label>targetWidth <input type="number" step="any" min="0" max="1" name="targetWidth" value="0.1"></label></p>
     <p><label>targetThickness <input type="number" step="any" min="0" max="1" name="targetThickness" value="0.02"></label></p>
     <p><label>drawnBallHighlight <input type="text" name="drawnBallHighlight" value="Black"></label></p>
-    <p><label>drawnBallThickness <input type="number" step="any" min="0" max="1" name="drawnBallThickness" value="0.5"></label></p>
+    <p><label>drawnBallThickness <input type="number" step="any" min="0" max="1" name="drawnBallThickness" value="0.25"></label></p>
     <p><label>timeSeconds <input type="number" step="any" name="timeSeconds" value="3"></label></p>
     <p><label>revealSeconds <input type="number" step="any" name="revealSeconds" value="0"></label></p>
     <p><label>frostedEdges <input type="checkbox" name="frostedEdges"></label></p>
@@ -123,9 +125,24 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
         }
     }
 
+    function isNumbered() {
+        return document.getElementById('numbered').checked;
+    }
+
     function addAllBalls() {
         const colours = Object.keys(counts);
-        blower.addBalls(colours.map(colour => counts[colour]), colours);
+        if (isNumbered()) {
+            blower.addBalls(colours.map(colour => BingoBlower.range(1, counts[colour])), colours);
+        } else {
+            blower.addBalls(colours.map(colour => counts[colour]), colours);
+        }
+    }
+
+    function describeDraw(draw) {
+        if (draw.number === null) {
+            return draw.label;
+        }
+        return `${draw.label} ${draw.number}`;
     }
 
     function rebuildBlower(event) {
@@ -153,7 +170,7 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
         document.getElementById('draw').disabled = true;
         const draw = await blower.drawBall();
         if (draw) {
-            document.getElementById('result').textContent = draw.label;
+            document.getElementById('result').textContent = describeDraw(draw);
         }
     });
 
@@ -171,7 +188,8 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
 
     for (const button of document.querySelectorAll('.add')) {
         button.addEventListener('click', () => {
-            blower.addBalls([1], [button.dataset.colour]);
+            const count = counts[button.dataset.colour];
+            blower.addBalls(isNumbered() ? [[count + 1]] : [1], [button.dataset.colour]);
             counts[button.dataset.colour]++;
             showCounts();
         });
@@ -182,13 +200,15 @@ The ball drawn is: &lt;span id="result"&gt;&lt;/span&gt;
             if (counts[button.dataset.colour] === 0) {
                 return;
             }
-            blower.removeBalls([1], [button.dataset.colour]);
+            const count = counts[button.dataset.colour];
+            blower.removeBalls(isNumbered() ? [[count]] : [1], [button.dataset.colour]);
             counts[button.dataset.colour]--;
             showCounts();
         });
     }
 
     document.getElementById('options').addEventListener('submit', rebuildBlower);
+    document.getElementById('numbered').addEventListener('change', rebuildBlower);
 </script>
 
 </body>
